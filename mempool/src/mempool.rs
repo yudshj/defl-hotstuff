@@ -121,6 +121,8 @@ impl Mempool {
             address,
             /* handler */ TxReceiverHandler { tx_batch_maker },
         );
+        
+        // TODO: receive client requests and make batches.
 
         // The transactions are sent to the `BatchMaker` that assembles them into batches. It then broadcasts
         // (in a reliable manner) the batches to all other mempools that share the same `id` as us. Finally,

@@ -76,6 +76,7 @@ impl Node {
     pub async fn analyze_block(&mut self) {
         while let Some(_block) = self.commit.recv().await {
             // This is where we can further process committed block.
+            // TODO: Here goes the application logic.
         }
     }
 }

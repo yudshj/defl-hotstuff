@@ -87,6 +87,7 @@ class LocalBench:
                     rate_share,
                     timeout
                 )
+                print(f"+++ Client: {cmd}")
                 self._background_run(cmd, log_file)
 
             # Run the nodes.
@@ -100,6 +101,7 @@ class LocalBench:
                     PathMaker.parameters_file(),
                     debug=debug
                 )
+                print(f"+++ Node: {cmd}")
                 self._background_run(cmd, log_file)
 
             # Wait for the nodes to synchronize
