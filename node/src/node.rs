@@ -3,7 +3,7 @@ use crate::config::{Committee, ConfigError, Parameters, Secret};
 use consensus::{Block, Consensus};
 use crypto::SignatureService;
 use log::info;
-use mempool::Mempool;
+use mempool::{Mempool, MempoolMessage};
 use store::Store;
 use tokio::sync::mpsc::{channel, Receiver};
 
@@ -12,6 +12,7 @@ pub const CHANNEL_CAPACITY: usize = 1_000;
 
 pub struct Node {
     pub commit: Receiver<Block>,
+    pub block_store: Store,
 }
 
 impl Node {
@@ -59,14 +60,14 @@ impl Node {
             committee.consensus,
             parameters.consensus,
             signature_service,
-            store,
+            store.clone(),
             rx_mempool_to_consensus,
             tx_consensus_to_mempool,
             tx_commit,
         );
 
         info!("Node {} successfully booted", name);
-        Ok(Self { commit: rx_commit })
+        Ok(Self { commit: rx_commit, block_store: store })
     }
 
     pub fn print_key_file(filename: &str) -> Result<(), ConfigError> {
@@ -74,9 +75,21 @@ impl Node {
     }
 
     pub async fn analyze_block(&mut self) {
-        while let Some(_block) = self.commit.recv().await {
+        while let Some(block) = self.commit.recv().await {
             // This is where we can further process committed block.
             // TODO: Here goes the application logic.
+            for digest in block.payload {
+                let serialized_batch = self.block_store.read(digest.to_vec())
+                    .await
+                    .expect("DONG: Call store read failed.")
+                    .expect("DONG: Digest not in `block_store'.");
+                // SerializedBatchMessage
+                if let Ok(MempoolMessage::Batch(batch)) = bincode::deserialize(serialized_batch.as_slice()) {
+                    for _client_transaction in batch {
+                        // TODO: Here goes the application logic.
+                    }
+                }
+            }
         }
     }
 }
