@@ -26,9 +26,9 @@ consensus = { path = "../consensus" }
 mempool = { path = "../mempool" }
 
 [features]
-benchmark = ["consensus/benchmark", "mempool/benchmark"]
+#benchmark = ["consensus/benchmark", "mempool/benchmark"]
 
 [[bin]]         
 name = "client"   
 path = "src/client.rs" 
-required-features = ["benchmark"] 
+#required-features = ["benchmark"]

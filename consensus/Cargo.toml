@@ -28,4 +28,4 @@ tokio-util = { version = "0.6.2", features= ["codec"] }
 rand = "0.7.3"
 
 [features]
-benchmark = []
+#benchmark = []
