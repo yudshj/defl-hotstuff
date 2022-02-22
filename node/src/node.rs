@@ -85,8 +85,9 @@ impl Node {
                     .expect("DONG: Digest not in `block_store'.");
                 // SerializedBatchMessage
                 if let Ok(MempoolMessage::Batch(batch)) = bincode::deserialize(serialized_batch.as_slice()) {
-                    for _client_transaction in batch {
-                        // TODO: Here goes the application logic.
+                    for client_tx in batch {
+                        // TODO: Here we process TXs.
+                        info!("DONG: Analyze client tx: {:?}", client_tx);
                     }
                 }
             }
