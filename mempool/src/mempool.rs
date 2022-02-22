@@ -116,7 +116,7 @@ impl Mempool {
             .committee
             .transactions_address(&self.name)
             .expect("Our public key is not in the committee");
-        address.set_ip("0.0.0.0".parse().unwrap());
+        address.set_ip("127.0.0.1".parse().unwrap());
         NetworkReceiver::spawn(
             address,
             /* handler */ TxReceiverHandler { tx_batch_maker },
@@ -165,7 +165,7 @@ impl Mempool {
             .committee
             .mempool_address(&self.name)
             .expect("Our public key is not in the committee");
-        address.set_ip("0.0.0.0".parse().unwrap());
+        address.set_ip("127.0.0.1".parse().unwrap());
         NetworkReceiver::spawn(
             address,
             /* handler */

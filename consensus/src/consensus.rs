@@ -64,7 +64,7 @@ impl Consensus {
         let mut address = committee
             .address(&name)
             .expect("Our public key is not in the committee");
-        address.set_ip("0.0.0.0".parse().unwrap());
+        address.set_ip("127.0.0.1".parse().unwrap());
         NetworkReceiver::spawn(
             address,
             /* handler */
