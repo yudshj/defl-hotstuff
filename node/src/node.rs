@@ -82,15 +82,20 @@ impl Node {
                 let serialized_batch = self.block_store.read(digest.to_vec())
                     .await
                     .expect("DONG: Call store read failed.")
-                    .expect("DONG: Digest not in `block_store'.");
+                    .expect("DONG: Digest not in `block_store`.");
                 // SerializedBatchMessage
                 if let Ok(MempoolMessage::Batch(batch)) = bincode::deserialize(serialized_batch.as_slice()) {
+                    info!("DONG: Start analyzing batch ...");
                     for client_tx in batch {
                         // TODO: Here we process TXs.
-                        info!("DONG: Analyze client tx: {:?}", client_tx);
+                        let tx_str = client_tx.iter().map(|hex| format!("{:02x}", hex)).collect::<Vec<_>>().join(",");
+                        info!("DONG: Analyze client tx: [{}].", tx_str);
                     }
+                    info!("DONG: End analyzing batch!");
                 }
             }
+            // TODO: respond to client
+            // TODO: 服务端 analyze 的时候通知 client (rust&python IPC)
         }
     }
 }

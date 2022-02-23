@@ -117,6 +117,7 @@ impl Client {
             let now = Instant::now();
 
             for x in 0..burst {
+                // #[cfg(feature = "benchmark")]
                 if x == counter % burst {
                     // NOTE: This log entry is used to compute performance.
                     info!("Sending sample transaction {}", counter);
@@ -131,6 +132,10 @@ impl Client {
                 };
                 tx.resize(self.size, 0u8);
                 let bytes = tx.split().freeze();
+
+                let tx_str = bytes.iter().map(|hex| format!("{:02x}", hex)).collect::<Vec<_>>().join(",");
+
+                info!("DONG: Send [{}].", tx_str);
 
                 if let Err(e) = transport.send(bytes).await {
                     warn!("Failed to send transaction: {}", e);
