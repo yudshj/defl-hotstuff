@@ -11,6 +11,7 @@ use std::net::SocketAddr;
 use tokio::net::TcpStream;
 use tokio::time::{interval, sleep, Duration, Instant};
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
+use base64;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -103,7 +104,7 @@ impl Client {
         // Submit all transactions.
         let burst = self.rate / PRECISION;
         let mut tx = BytesMut::with_capacity(self.size);
-        let mut counter = 0;
+        // let mut counter = 0;
         let mut r = rand::thread_rng().gen();
         let mut transport = Framed::new(stream, LengthDelimitedCodec::new());
         let interval = interval(Duration::from_millis(BURST_DURATION));
@@ -116,8 +117,8 @@ impl Client {
             interval.as_mut().tick().await;
             let now = Instant::now();
 
-            for x in 0..burst {
-                // #[cfg(feature = "benchmark")]
+            for _ in 0..burst {
+                #[cfg(feature = "benchmark")]
                 if x == counter % burst {
                     // NOTE: This log entry is used to compute performance.
                     info!("Sending sample transaction {}", counter);
@@ -130,10 +131,15 @@ impl Client {
                     tx.put_u8(1u8); // Standard txs start with 1.
                     tx.put_u64(r); // Ensures all clients send different txs.
                 };
+                r += 1;
+                tx.put_u8(1u8); // Standard txs start with 1.
+                tx.put_u64(r); // Ensures all clients send different txs.
+                tx.put_u64(r * r + r); // Ensures all clients send different txs.
+                tx.put_u64(r * r * r - r); // Ensures all clients send different txs.
                 tx.resize(self.size, 0u8);
                 let bytes = tx.split().freeze();
 
-                let tx_str = bytes.iter().map(|hex| format!("{:02x}", hex)).collect::<Vec<_>>().join(",");
+                let tx_str = base64::encode(&bytes);
 
                 info!("DONG: Send [{}].", tx_str);
 
@@ -146,7 +152,7 @@ impl Client {
                 // NOTE: This log entry is used to compute performance.
                 warn!("Transaction rate too high for this client");
             }
-            counter += 1;
+            // counter += 1;
         }
         Ok(())
     }
