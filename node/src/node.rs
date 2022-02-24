@@ -88,7 +88,7 @@ impl Node {
                     info!("DONG: Start analyzing batch ...");
                     for client_tx in batch {
                         // TODO: Here we process TXs.
-                        let tx_str = client_tx.iter().map(|hex| format!("{:02x}", hex)).collect::<Vec<_>>().join(",");
+                        let tx_str = base64::encode(client_tx);
                         info!("DONG: Analyze client tx: [{}].", tx_str);
                     }
                     info!("DONG: End analyzing batch!");

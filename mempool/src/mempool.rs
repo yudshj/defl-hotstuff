@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use std::error::Error;
 use store::Store;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
+use crate::parser::{ClientRequest, RequestMethod};
 
 #[cfg(test)]
 #[path = "tests/mempool_tests.rs"]
@@ -202,10 +203,17 @@ struct TxReceiverHandler {
 
 #[async_trait]
 impl MessageHandler for TxReceiverHandler {
-    async fn dispatch(&self, _writer: &mut Writer, message: Bytes) -> Result<(), Box<dyn Error>> {
+    async fn dispatch(&self, writer: &mut Writer, message: Bytes) -> Result<(), Box<dyn Error>> {
         // Send the transaction to the batch maker.
+        let tx = message.to_vec();
+        let client_request = ClientRequest::from(&tx);
+        match client_request.meta.method {
+            RequestMethod::FetchWLast => { let _ = writer.send(Bytes::from("FetchWLast")).await; }
+            RequestMethod::NewWeights => { let _ = writer.send(Bytes::from("NewWeights")).await; }
+            RequestMethod::NewEpoch => { let _ = writer.send(Bytes::from("NewEpoch")).await; }
+        }
         self.tx_batch_maker
-            .send(message.to_vec())
+            .send(tx)
             .await
             .expect("Failed to send transaction");
 
