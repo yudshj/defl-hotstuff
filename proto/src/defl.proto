@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package defl;
+
+enum RequestMethod {
+  FETCH_W_LAST = 0;
+  NEW_WEIGHTS = 1;
+  NEW_EPOCH = 2;
+}
+
+message MetaInfo {
+  RequestMethod method = 1;
+  string request_uuid = 2;
+  string listen_host = 3;
+  int32 listen_port = 4;
+  string client_name = 5;
+  optional int64 target_epoch_id = 6;
+}
+
+message ClientRequest {
+  MetaInfo meta = 1;
+  optional bytes weights = 2;
+}
+
+message Response {
+  string msg = 1;
+  map<string, bytes> w_last = 2;
+}

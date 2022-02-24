@@ -1,5 +1,8 @@
 #!/opt/homebrew/bin/python3
 # ./client 127.0.0.1:9007 --size 1024000 --rate 4 --timeout 1000 2> logs/client-3.log
+# +++++++++
+# in proto/src/ :
+# protoc -I=. --python_out=../../benchmark/proto/ --mypy_out=../../benchmark/proto/ defl.proto
 import argparse
 import json
 import socket  # 导入 socket 模块
@@ -7,40 +10,13 @@ import random
 import time
 import logging
 from io import BytesIO
+import uuid
 from typing import TypedDict
-
-'''
-#[derive(PartialEq, Debug)]
-pub enum RequestMethod {
-    FetchWLast,
-    NewWeights,
-    NewEpoch,
-}
-'''
-
-# {"method":0,"listen_host":"127.0.0.1","listen_port":8080,"uuid":"uuid","client_name":"client_name","target_epoch_id":1}
-MetaInfo = TypedDict('MetaInfo', {
-    'method': int,
-    'listen_host': str,
-    'listen_port': int,
-    'uuid': str,
-    'client_name': str,
-    'target_epoch_id': int,
-})
-ClientRequest = TypedDict('ClientRequest', {
-    'meta': MetaInfo,
-    'weights': bytes,
-})
+from proto.defl_pb2 import ClientRequest, MetaInfo, RequestMethod
 
 
 def client_request_to_bytes(client_request: ClientRequest) -> bytes:
-    meta_json = json.dumps(client_request['meta'], separators=(',', ':')).encode()
-    meta_length = len(meta_json)
-    buf = BytesIO()
-    buf.write(meta_length.to_bytes(4, 'big'))
-    buf.write(meta_json)
-    buf.write(client_request['weights'])
-    return buf.getvalue()
+    return client_request.SerializeToString()
 
 
 def length_delimited_send(sock: socket.socket, data: bytes):
@@ -88,11 +64,20 @@ if __name__ == '__main__':
     s.connect(sock_addr)
     while True:
         r += 1
-        meta: MetaInfo = {"method": 0, "listen_host": "127.0.0.1", "listen_port": 8080, "uuid": "uuid",
-                          "client_name": "client_name", "target_epoch_id": 1}
+        meta: MetaInfo = MetaInfo(
+            method=RequestMethod.FETCH_W_LAST,
+            request_uuid=str(uuid.uuid4()),
+            listen_host="127.0.0.1",
+            listen_port=8080,
+            client_name="foobar1",
+            target_epoch_id=1,
+        )
         weights = r.to_bytes(4, 'big')
-        client_request: ClientRequest = {"meta": meta, "weights": weights}
-        msg = client_request_to_bytes(client_request)
+        client_request: ClientRequest = ClientRequest(
+            meta=meta,
+            weights=weights,
+        )
+        msg = client_request.SerializeToString()
         length_delimited_send(s, msg)
         resp = length_delimited_recv(s)
         logging.info('response: %s', resp.decode())
