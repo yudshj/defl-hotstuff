@@ -1,11 +1,17 @@
 use crate::config::Export as _;
 use crate::config::{Committee, ConfigError, Parameters, Secret};
+use bytes::Bytes;
 use consensus::{Block, Consensus};
 use crypto::SignatureService;
 use log::info;
 use mempool::{Mempool, MempoolMessage};
 use store::Store;
 use tokio::sync::mpsc::{channel, Receiver};
+use proto::defl::*;
+use prost::Message;
+// Sync the mempool with the consensus and nodes.
+use std::sync::{Arc, Mutex};
+use proto::{ContactsType, WLastType};
 
 /// The default channel capacity for this module.
 pub const CHANNEL_CAPACITY: usize = 1_000;
@@ -13,6 +19,8 @@ pub const CHANNEL_CAPACITY: usize = 1_000;
 pub struct Node {
     pub commit: Receiver<Block>,
     pub block_store: Store,
+    pub contacts: Arc<Mutex<ContactsType>>,
+    pub w_last: Arc<Mutex<WLastType>>,
 }
 
 impl Node {
@@ -41,6 +49,10 @@ impl Node {
         // Make the data store.
         let store = Store::new(store_path).expect("Failed to create store");
 
+        // Make DeFL components.
+        let contacts = Arc::new(Mutex::new(ContactsType::new()));
+        let w_last = Arc::new(Mutex::new(WLastType::new()));
+
         // Run the signature service.
         let signature_service = SignatureService::new(secret_key);
 
@@ -52,6 +64,8 @@ impl Node {
             store.clone(),
             rx_consensus_to_mempool,
             tx_mempool_to_consensus,
+            contacts.clone(),
+            w_last.clone(),
         );
 
         // Run the consensus core.
@@ -67,7 +81,7 @@ impl Node {
         );
 
         info!("Node {} successfully booted", name);
-        Ok(Self { commit: rx_commit, block_store: store })
+        Ok(Self { commit: rx_commit, block_store: store, contacts, w_last })
     }
 
     pub fn print_key_file(filename: &str) -> Result<(), ConfigError> {
@@ -88,8 +102,28 @@ impl Node {
                     info!("DONG: Start analyzing batch ...");
                     for client_tx in batch {
                         // TODO: Here we process TXs.
-                        let tx_str = base64::encode(client_tx);
+                        let tx_str = base64::encode(&client_tx);
                         info!("DONG: Analyze client tx: [{}].", tx_str);
+
+                        let client_request = ClientRequest::decode(Bytes::from(client_tx)).unwrap();
+                        match RequestMethod::from_i32(client_request.method) {
+                            Some(RequestMethod::FetchWLast) => {
+                                info!("DONG:");
+                            }
+                            Some(RequestMethod::NewWeights) => {
+                                info!("DONG:");
+                            }
+                            Some(RequestMethod::NewEpoch) => {
+                                info!("DONG:");
+                            }
+                            Some(RequestMethod::ClientRegister) => {
+                                info!("DONG:");
+                                if let Some(socket) = client_request.socket {
+                                    self.contacts.lock().unwrap().insert(client_request.client_name, (socket.host, socket.port));
+                                }
+                            }
+                            None => {}
+                        }
                     }
                     info!("DONG: End analyzing batch!");
                 }

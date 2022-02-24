@@ -4,6 +4,7 @@ use crate::helper::Helper;
 use crate::processor::{Processor, SerializedBatchMessage};
 use crate::quorum_waiter::QuorumWaiter;
 use crate::synchronizer::Synchronizer;
+use crate::transaction_filter::TransactionFilter;
 use async_trait::async_trait;
 use bytes::Bytes;
 use crypto::{Digest, PublicKey};
@@ -11,11 +12,11 @@ use futures::sink::SinkExt as _;
 use log::{info, warn};
 use network::{MessageHandler, Receiver as NetworkReceiver, Writer};
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
 use std::error::Error;
 use store::Store;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
-use proto::defl::*;
-use prost::Message;
+use proto::{ContactsType, WLastType};
 
 #[cfg(test)]
 #[path = "tests/mempool_tests.rs"]
@@ -64,6 +65,8 @@ impl Mempool {
         store: Store,
         rx_consensus: Receiver<ConsensusMempoolMessage>,
         tx_consensus: Sender<Digest>,
+        contacts: Arc<Mutex<ContactsType>>,
+        w_last: Arc<Mutex<WLastType>>,
     ) {
         // NOTE: This log entry is used to compute performance.
         parameters.log();
@@ -79,7 +82,7 @@ impl Mempool {
 
         // Spawn all mempool tasks.
         mempool.handle_consensus_messages(rx_consensus);
-        mempool.handle_clients_transactions();
+        mempool.handle_clients_transactions(contacts, w_last);
         mempool.handle_mempool_messages();
 
         info!(
@@ -108,7 +111,8 @@ impl Mempool {
     }
 
     /// Spawn all tasks responsible to handle clients transactions.
-    fn handle_clients_transactions(&self) {
+    fn handle_clients_transactions(&self, contacts: Arc<Mutex<ContactsType>>, w_last: Arc<Mutex<WLastType>>) {
+        let (tx_filter, rx_filter) = channel(CHANNEL_CAPACITY);
         let (tx_batch_maker, rx_batch_maker) = channel(CHANNEL_CAPACITY);
         let (tx_quorum_waiter, rx_quorum_waiter) = channel(CHANNEL_CAPACITY);
         let (tx_processor, rx_processor) = channel(CHANNEL_CAPACITY);
@@ -121,10 +125,17 @@ impl Mempool {
         address.set_ip("127.0.0.1".parse().unwrap());
         NetworkReceiver::spawn(
             address,
-            /* handler */ TxReceiverHandler { tx_batch_maker },
+            /* handler */ TxReceiverHandler { tx_filter },
         );
         
         // TODO: receive client requests and make batches.
+
+        TransactionFilter::spawn(
+            contacts,
+            w_last,
+            rx_filter,
+            tx_batch_maker,
+        );
 
         // The transactions are sent to the `BatchMaker` that assembles them into batches. It then broadcasts
         // (in a reliable manner) the batches to all other mempools that share the same `id` as us. Finally,
@@ -199,21 +210,16 @@ impl Mempool {
 /// Defines how the network receiver handles incoming transactions.
 #[derive(Clone)]
 struct TxReceiverHandler {
-    tx_batch_maker: Sender<Transaction>,
+    tx_filter: Sender<Transaction>,
 }
 
 #[async_trait]
 impl MessageHandler for TxReceiverHandler {
     async fn dispatch(&self, writer: &mut Writer, message: Bytes) -> Result<(), Box<dyn Error>> {
+        let _ = writer.send(Bytes::from("Ack")).await;
+
         // Send the transaction to the batch maker.
-        let client_request = ClientRequest::decode(message.clone()).unwrap();
-        match RequestMethod::from_i32(client_request.meta.unwrap().method) {
-            Some(RequestMethod::FetchWLast) => { let _ = writer.send(Bytes::from("FetchWLast")).await; }
-            Some(RequestMethod::NewWeights) => { let _ = writer.send(Bytes::from("NewWeights")).await; }
-            Some(RequestMethod::NewEpoch) => { let _ = writer.send(Bytes::from("NewEpoch")).await; }
-            None => {}
-        }
-        self.tx_batch_maker
+        self.tx_filter
             .send(message.to_vec())
             .await
             .expect("Failed to send transaction");

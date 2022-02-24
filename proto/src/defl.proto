@@ -6,20 +6,22 @@ enum RequestMethod {
   FETCH_W_LAST = 0;
   NEW_WEIGHTS = 1;
   NEW_EPOCH = 2;
+  // Registration
+  CLIENT_REGISTER = 7;
 }
 
-message MetaInfo {
-  RequestMethod method = 1;
-  string request_uuid = 2;
-  string listen_host = 3;
-  int32 listen_port = 4;
-  string client_name = 5;
-  optional int64 target_epoch_id = 6;
+message SocketInfo {
+  string host = 1;
+  int32 port = 2;
 }
 
 message ClientRequest {
-  MetaInfo meta = 1;
-  optional bytes weights = 2;
+  RequestMethod method = 1;
+  string request_uuid = 2;
+  string client_name = 3;
+  optional SocketInfo socket = 4;
+  optional int64 target_epoch_id = 5;
+  optional bytes weights = 6;
 }
 
 message Response {

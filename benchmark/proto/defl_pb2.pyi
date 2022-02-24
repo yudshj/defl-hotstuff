@@ -20,57 +20,66 @@ class _RequestMethodEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._
     FETCH_W_LAST: _RequestMethod.ValueType  # 0
     NEW_WEIGHTS: _RequestMethod.ValueType  # 1
     NEW_EPOCH: _RequestMethod.ValueType  # 2
+    CLIENT_REGISTER: _RequestMethod.ValueType  # 7
+    """Registration"""
+
 class RequestMethod(_RequestMethod, metaclass=_RequestMethodEnumTypeWrapper):
     pass
 
 FETCH_W_LAST: RequestMethod.ValueType  # 0
 NEW_WEIGHTS: RequestMethod.ValueType  # 1
 NEW_EPOCH: RequestMethod.ValueType  # 2
+CLIENT_REGISTER: RequestMethod.ValueType  # 7
+"""Registration"""
+
 global___RequestMethod = RequestMethod
 
 
-class MetaInfo(google.protobuf.message.Message):
+class SocketInfo(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+    HOST_FIELD_NUMBER: builtins.int
+    PORT_FIELD_NUMBER: builtins.int
+    host: typing.Text
+    port: builtins.int
+    def __init__(self,
+        *,
+        host: typing.Text = ...,
+        port: builtins.int = ...,
+        ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["host",b"host","port",b"port"]) -> None: ...
+global___SocketInfo = SocketInfo
+
+class ClientRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
     METHOD_FIELD_NUMBER: builtins.int
     REQUEST_UUID_FIELD_NUMBER: builtins.int
-    LISTEN_HOST_FIELD_NUMBER: builtins.int
-    LISTEN_PORT_FIELD_NUMBER: builtins.int
     CLIENT_NAME_FIELD_NUMBER: builtins.int
+    SOCKET_FIELD_NUMBER: builtins.int
     TARGET_EPOCH_ID_FIELD_NUMBER: builtins.int
+    WEIGHTS_FIELD_NUMBER: builtins.int
     method: global___RequestMethod.ValueType
     request_uuid: typing.Text
-    listen_host: typing.Text
-    listen_port: builtins.int
     client_name: typing.Text
+    @property
+    def socket(self) -> global___SocketInfo: ...
     target_epoch_id: builtins.int
+    weights: builtins.bytes
     def __init__(self,
         *,
         method: global___RequestMethod.ValueType = ...,
         request_uuid: typing.Text = ...,
-        listen_host: typing.Text = ...,
-        listen_port: builtins.int = ...,
         client_name: typing.Text = ...,
+        socket: typing.Optional[global___SocketInfo] = ...,
         target_epoch_id: typing.Optional[builtins.int] = ...,
-        ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["_target_epoch_id",b"_target_epoch_id","target_epoch_id",b"target_epoch_id"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["_target_epoch_id",b"_target_epoch_id","client_name",b"client_name","listen_host",b"listen_host","listen_port",b"listen_port","method",b"method","request_uuid",b"request_uuid","target_epoch_id",b"target_epoch_id"]) -> None: ...
-    def WhichOneof(self, oneof_group: typing_extensions.Literal["_target_epoch_id",b"_target_epoch_id"]) -> typing.Optional[typing_extensions.Literal["target_epoch_id"]]: ...
-global___MetaInfo = MetaInfo
-
-class ClientRequest(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
-    META_FIELD_NUMBER: builtins.int
-    WEIGHTS_FIELD_NUMBER: builtins.int
-    @property
-    def meta(self) -> global___MetaInfo: ...
-    weights: builtins.bytes
-    def __init__(self,
-        *,
-        meta: typing.Optional[global___MetaInfo] = ...,
         weights: typing.Optional[builtins.bytes] = ...,
         ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["_weights",b"_weights","meta",b"meta","weights",b"weights"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["_weights",b"_weights","meta",b"meta","weights",b"weights"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["_socket",b"_socket","_target_epoch_id",b"_target_epoch_id","_weights",b"_weights","socket",b"socket","target_epoch_id",b"target_epoch_id","weights",b"weights"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["_socket",b"_socket","_target_epoch_id",b"_target_epoch_id","_weights",b"_weights","client_name",b"client_name","method",b"method","request_uuid",b"request_uuid","socket",b"socket","target_epoch_id",b"target_epoch_id","weights",b"weights"]) -> None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_socket",b"_socket"]) -> typing.Optional[typing_extensions.Literal["socket"]]: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_target_epoch_id",b"_target_epoch_id"]) -> typing.Optional[typing_extensions.Literal["target_epoch_id"]]: ...
+    @typing.overload
     def WhichOneof(self, oneof_group: typing_extensions.Literal["_weights",b"_weights"]) -> typing.Optional[typing_extensions.Literal["weights"]]: ...
 global___ClientRequest = ClientRequest
 

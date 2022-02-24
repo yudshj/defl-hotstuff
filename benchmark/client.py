@@ -12,11 +12,7 @@ import logging
 from io import BytesIO
 import uuid
 from typing import TypedDict
-from proto.defl_pb2 import ClientRequest, MetaInfo, RequestMethod
-
-
-def client_request_to_bytes(client_request: ClientRequest) -> bytes:
-    return client_request.SerializeToString()
+from proto.defl_pb2 import ClientRequest, RequestMethod, SocketInfo
 
 
 def length_delimited_send(sock: socket.socket, data: bytes):
@@ -62,21 +58,28 @@ if __name__ == '__main__':
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(args.timeout / 1000.0)
     s.connect(sock_addr)
+    socket_info = SocketInfo(
+        host="127.0.0.1",
+        port=8080,
+    )
+    client_request = ClientRequest(
+        method=RequestMethod.CLIENT_REGISTER,
+        request_uuid=str(uuid.uuid4()),
+        socket=socket_info,
+        client_name=str(uuid.uuid4()),
+        target_epoch_id=1,
+    )
+    msg = client_request.SerializeToString()
+    length_delimited_send(s, msg)
+    resp = length_delimited_recv(s)
+    logging.info('response: %s', resp.decode())
+
+    client_request.method=RequestMethod.FETCH_W_LAST
     while True:
         r += 1
-        meta: MetaInfo = MetaInfo(
-            method=RequestMethod.FETCH_W_LAST,
-            request_uuid=str(uuid.uuid4()),
-            listen_host="127.0.0.1",
-            listen_port=8080,
-            client_name="foobar1",
-            target_epoch_id=1,
-        )
         weights = r.to_bytes(4, 'big')
-        client_request: ClientRequest = ClientRequest(
-            meta=meta,
-            weights=weights,
-        )
+        client_request.weights = weights
+        client_request.request_uuid = str(uuid.uuid4())
         msg = client_request.SerializeToString()
         length_delimited_send(s, msg)
         resp = length_delimited_recv(s)

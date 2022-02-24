@@ -20,11 +20,13 @@ serde_json = "1.0.61"
 rand = "0.7.3"
 thiserror = "1.0.21"
 anyhow = "1.0.38"
+prost = "0.9.0"
 
 crypto = { path = "../crypto" }
 store = { path = "../store" }
 consensus = { path = "../consensus" }
 mempool = { path = "../mempool" }
+proto = { path = "../proto" }
 
 [features]
 #benchmark = ["consensus/benchmark", "mempool/benchmark"]

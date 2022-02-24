@@ -15,25 +15,26 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ndefl.proto\x12\x04\x64\x65\x66l\"\xb6\x01\n\x08MetaInfo\x12#\n\x06method\x18\x01 \x01(\x0e\x32\x13.defl.RequestMethod\x12\x14\n\x0crequest_uuid\x18\x02 \x01(\t\x12\x13\n\x0blisten_host\x18\x03 \x01(\t\x12\x13\n\x0blisten_port\x18\x04 \x01(\x05\x12\x13\n\x0b\x63lient_name\x18\x05 \x01(\t\x12\x1c\n\x0ftarget_epoch_id\x18\x06 \x01(\x03H\x00\x88\x01\x01\x42\x12\n\x10_target_epoch_id\"O\n\rClientRequest\x12\x1c\n\x04meta\x18\x01 \x01(\x0b\x32\x0e.defl.MetaInfo\x12\x14\n\x07weights\x18\x02 \x01(\x0cH\x00\x88\x01\x01\x42\n\n\x08_weights\"p\n\x08Response\x12\x0b\n\x03msg\x18\x01 \x01(\t\x12)\n\x06w_last\x18\x02 \x03(\x0b\x32\x19.defl.Response.WLastEntry\x1a,\n\nWLastEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x0c:\x02\x38\x01*A\n\rRequestMethod\x12\x10\n\x0c\x46\x45TCH_W_LAST\x10\x00\x12\x0f\n\x0bNEW_WEIGHTS\x10\x01\x12\r\n\tNEW_EPOCH\x10\x02\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ndefl.proto\x12\x04\x64\x65\x66l\"(\n\nSocketInfo\x12\x0c\n\x04host\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\x05\"\xe5\x01\n\rClientRequest\x12#\n\x06method\x18\x01 \x01(\x0e\x32\x13.defl.RequestMethod\x12\x14\n\x0crequest_uuid\x18\x02 \x01(\t\x12\x13\n\x0b\x63lient_name\x18\x03 \x01(\t\x12%\n\x06socket\x18\x04 \x01(\x0b\x32\x10.defl.SocketInfoH\x00\x88\x01\x01\x12\x1c\n\x0ftarget_epoch_id\x18\x05 \x01(\x03H\x01\x88\x01\x01\x12\x14\n\x07weights\x18\x06 \x01(\x0cH\x02\x88\x01\x01\x42\t\n\x07_socketB\x12\n\x10_target_epoch_idB\n\n\x08_weights\"p\n\x08Response\x12\x0b\n\x03msg\x18\x01 \x01(\t\x12)\n\x06w_last\x18\x02 \x03(\x0b\x32\x19.defl.Response.WLastEntry\x1a,\n\nWLastEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x0c:\x02\x38\x01*V\n\rRequestMethod\x12\x10\n\x0c\x46\x45TCH_W_LAST\x10\x00\x12\x0f\n\x0bNEW_WEIGHTS\x10\x01\x12\r\n\tNEW_EPOCH\x10\x02\x12\x13\n\x0f\x43LIENT_REGISTER\x10\x07\x62\x06proto3')
 
 _REQUESTMETHOD = DESCRIPTOR.enum_types_by_name['RequestMethod']
 RequestMethod = enum_type_wrapper.EnumTypeWrapper(_REQUESTMETHOD)
 FETCH_W_LAST = 0
 NEW_WEIGHTS = 1
 NEW_EPOCH = 2
+CLIENT_REGISTER = 7
 
 
-_METAINFO = DESCRIPTOR.message_types_by_name['MetaInfo']
+_SOCKETINFO = DESCRIPTOR.message_types_by_name['SocketInfo']
 _CLIENTREQUEST = DESCRIPTOR.message_types_by_name['ClientRequest']
 _RESPONSE = DESCRIPTOR.message_types_by_name['Response']
 _RESPONSE_WLASTENTRY = _RESPONSE.nested_types_by_name['WLastEntry']
-MetaInfo = _reflection.GeneratedProtocolMessageType('MetaInfo', (_message.Message,), {
-  'DESCRIPTOR' : _METAINFO,
+SocketInfo = _reflection.GeneratedProtocolMessageType('SocketInfo', (_message.Message,), {
+  'DESCRIPTOR' : _SOCKETINFO,
   '__module__' : 'defl_pb2'
-  # @@protoc_insertion_point(class_scope:defl.MetaInfo)
+  # @@protoc_insertion_point(class_scope:defl.SocketInfo)
   })
-_sym_db.RegisterMessage(MetaInfo)
+_sym_db.RegisterMessage(SocketInfo)
 
 ClientRequest = _reflection.GeneratedProtocolMessageType('ClientRequest', (_message.Message,), {
   'DESCRIPTOR' : _CLIENTREQUEST,
@@ -62,14 +63,14 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
   _RESPONSE_WLASTENTRY._options = None
   _RESPONSE_WLASTENTRY._serialized_options = b'8\001'
-  _REQUESTMETHOD._serialized_start=400
-  _REQUESTMETHOD._serialized_end=465
-  _METAINFO._serialized_start=21
-  _METAINFO._serialized_end=203
-  _CLIENTREQUEST._serialized_start=205
-  _CLIENTREQUEST._serialized_end=284
-  _RESPONSE._serialized_start=286
-  _RESPONSE._serialized_end=398
-  _RESPONSE_WLASTENTRY._serialized_start=354
-  _RESPONSE_WLASTENTRY._serialized_end=398
+  _REQUESTMETHOD._serialized_start=408
+  _REQUESTMETHOD._serialized_end=494
+  _SOCKETINFO._serialized_start=20
+  _SOCKETINFO._serialized_end=60
+  _CLIENTREQUEST._serialized_start=63
+  _CLIENTREQUEST._serialized_end=292
+  _RESPONSE._serialized_start=294
+  _RESPONSE._serialized_end=406
+  _RESPONSE_WLASTENTRY._serialized_start=362
+  _RESPONSE_WLASTENTRY._serialized_end=406
 # @@protoc_insertion_point(module_scope)
