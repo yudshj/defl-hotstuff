@@ -1,17 +1,19 @@
-use crate::config::Export as _;
-use crate::config::{Committee, ConfigError, Parameters, Secret};
 use bytes::Bytes;
 use consensus::{Block, Consensus};
 use crypto::SignatureService;
-use log::info;
+use log::{info, warn};
 use mempool::{Mempool, MempoolMessage};
-use store::Store;
-use tokio::sync::mpsc::{channel, Receiver};
-use proto::defl::*;
 use prost::Message;
 // Sync the mempool with the consensus and nodes.
-use std::sync::{Arc, Mutex};
 use proto::{ContactsType, WLastType};
+use proto::defl::*;
+use proto::defl::client_request::Method;
+use std::sync::{Arc, Mutex};
+use store::Store;
+use tokio::sync::mpsc::{channel, Receiver};
+
+use crate::config::{Committee, ConfigError, Parameters, Secret};
+use crate::config::Export as _;
 
 /// The default channel capacity for this module.
 pub const CHANNEL_CAPACITY: usize = 1_000;
@@ -81,7 +83,12 @@ impl Node {
         );
 
         info!("Node {} successfully booted", name);
-        Ok(Self { commit: rx_commit, block_store: store, contacts, w_last })
+        Ok(Self {
+            commit: rx_commit,
+            block_store: store,
+            contacts,
+            w_last,
+        })
     }
 
     pub fn print_key_file(filename: &str) -> Result<(), ConfigError> {
@@ -93,12 +100,16 @@ impl Node {
             // This is where we can further process committed block.
             // TODO: Here goes the application logic.
             for digest in block.payload {
-                let serialized_batch = self.block_store.read(digest.to_vec())
+                let serialized_batch = self
+                    .block_store
+                    .read(digest.to_vec())
                     .await
                     .expect("DONG: Call store read failed.")
                     .expect("DONG: Digest not in `block_store`.");
                 // SerializedBatchMessage
-                if let Ok(MempoolMessage::Batch(batch)) = bincode::deserialize(serialized_batch.as_slice()) {
+                if let Ok(MempoolMessage::Batch(batch)) =
+                bincode::deserialize(serialized_batch.as_slice())
+                {
                     info!("DONG: Start analyzing batch ...");
                     for client_tx in batch {
                         // TODO: Here we process TXs.
@@ -106,23 +117,16 @@ impl Node {
                         info!("DONG: Analyze client tx: [{}].", tx_str);
 
                         let client_request = ClientRequest::decode(Bytes::from(client_tx)).unwrap();
-                        match RequestMethod::from_i32(client_request.method) {
-                            Some(RequestMethod::FetchWLast) => {
+                        match Method::from_i32(client_request.method) {
+                            Some(Method::NewWeights) => {
                                 info!("DONG:");
                             }
-                            Some(RequestMethod::NewWeights) => {
+                            Some(Method::NewEpoch) => {
                                 info!("DONG:");
                             }
-                            Some(RequestMethod::NewEpoch) => {
-                                info!("DONG:");
+                            _ => {
+                                warn!("DONG: Block should be filtered out previously")
                             }
-                            Some(RequestMethod::ClientRegister) => {
-                                info!("DONG:");
-                                if let Some(socket) = client_request.socket {
-                                    self.contacts.lock().unwrap().insert(client_request.client_name, (socket.host, socket.port));
-                                }
-                            }
-                            None => {}
                         }
                     }
                     info!("DONG: End analyzing batch!");

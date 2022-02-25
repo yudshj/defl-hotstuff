@@ -1,6 +1,11 @@
 #!/bin/zsh
-SLEEP_SEC=5
+SLEEP_SEC=6
+protoc -I=proto/src/ --python_out=benchmark/proto/ --mypy_out=benchmark/proto/ defl.proto
 cargo build --release -j8
+if [ $? -ne 0 ]; then
+    echo "Failed to build rust files"
+    exit 1
+fi
 #/usr/libexec/ApplicationFirewall/socketfilterfw --add $HOME/Gits/hotstuff/target/release/node
 
 for i in {0..3}

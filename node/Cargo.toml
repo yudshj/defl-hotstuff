@@ -27,6 +27,7 @@ store = { path = "../store" }
 consensus = { path = "../consensus" }
 mempool = { path = "../mempool" }
 proto = { path = "../proto" }
+network = { path = "../network" }
 
 [features]
 #benchmark = ["consensus/benchmark", "mempool/benchmark"]

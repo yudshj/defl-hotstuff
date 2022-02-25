@@ -2,26 +2,28 @@ syntax = "proto3";
 
 package defl;
 
-enum RequestMethod {
-  FETCH_W_LAST = 0;
-  NEW_WEIGHTS = 1;
-  NEW_EPOCH = 2;
-  // Registration
-  CLIENT_REGISTER = 7;
-}
-
-message SocketInfo {
+message RegisterInfo {
   string host = 1;
   int32 port = 2;
+  string pasv_host = 3;
+  int32 pasv_port = 4;
 }
 
 message ClientRequest {
-  RequestMethod method = 1;
+  enum Method {
+    FETCH_W_LAST = 0;
+    NEW_WEIGHTS = 1;
+    NEW_EPOCH = 2;
+    // Registration
+    CLIENT_REGISTER = 7;
+  }
+
+  Method method = 1;
   string request_uuid = 2;
   string client_name = 3;
-  optional SocketInfo socket = 4;
-  optional int64 target_epoch_id = 5;
-  optional bytes weights = 6;
+  optional int64 target_epoch_id = 4;
+  optional bytes weights = 5;
+  optional RegisterInfo register_info = 6;
 }
 
 message Response {

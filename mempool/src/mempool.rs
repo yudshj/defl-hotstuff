@@ -1,3 +1,16 @@
+use async_trait::async_trait;
+use bytes::Bytes;
+use crypto::{Digest, PublicKey};
+use futures::sink::SinkExt as _;
+use log::{info, warn};
+use network::{MessageHandler, Receiver as NetworkReceiver, SimpleSender, Writer};
+use proto::{ContactsType, WLastType};
+use serde::{Deserialize, Serialize};
+use std::error::Error;
+use std::sync::{Arc, Mutex};
+use store::Store;
+use tokio::sync::mpsc::{channel, Receiver, Sender};
+
 use crate::batch_maker::{Batch, BatchMaker, Transaction};
 use crate::config::{Committee, Parameters};
 use crate::helper::Helper;
@@ -5,18 +18,6 @@ use crate::processor::{Processor, SerializedBatchMessage};
 use crate::quorum_waiter::QuorumWaiter;
 use crate::synchronizer::Synchronizer;
 use crate::transaction_filter::TransactionFilter;
-use async_trait::async_trait;
-use bytes::Bytes;
-use crypto::{Digest, PublicKey};
-use futures::sink::SinkExt as _;
-use log::{info, warn};
-use network::{MessageHandler, Receiver as NetworkReceiver, Writer};
-use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
-use std::error::Error;
-use store::Store;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
-use proto::{ContactsType, WLastType};
 
 #[cfg(test)]
 #[path = "tests/mempool_tests.rs"]
@@ -127,14 +128,13 @@ impl Mempool {
             address,
             /* handler */ TxReceiverHandler { tx_filter },
         );
-        
-        // TODO: receive client requests and make batches.
 
         TransactionFilter::spawn(
             contacts,
             w_last,
             rx_filter,
             tx_batch_maker,
+            SimpleSender::new(),
         );
 
         // The transactions are sent to the `BatchMaker` that assembles them into batches. It then broadcasts
@@ -216,6 +216,7 @@ struct TxReceiverHandler {
 #[async_trait]
 impl MessageHandler for TxReceiverHandler {
     async fn dispatch(&self, writer: &mut Writer, message: Bytes) -> Result<(), Box<dyn Error>> {
+        info!("DONG: Sending Ack");
         let _ = writer.send(Bytes::from("Ack")).await;
 
         // Send the transaction to the batch maker.
