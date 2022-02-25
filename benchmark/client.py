@@ -7,9 +7,11 @@ import asyncio
 import logging
 import random
 import time
+from google.protobuf import text_format
 import uuid
 
 from committer import IpcCommitter
+from proto.defl_pb2 import Response
 
 
 async def main():
@@ -41,7 +43,8 @@ async def main():
     while True:
         r += 1
         response = await committer.fetch_w_last()
-        logging.info(f'\n++++++++++++ [Collect] +++++++++++++\n{response}++++++++++++++++++++++++++++++++++++')
+        # logging.info(f'\n++++++++++++ [Collect] +++++++++++++\n{response}++++++++++++++++++++++++++++++++++++')
+        logging.info(f'{response.request_uuid} Collected: {Response.Status.Name(response.stat)} with {response.ByteSize()} bytes')
         await asyncio.sleep(duration)
 
 if __name__ == '__main__':

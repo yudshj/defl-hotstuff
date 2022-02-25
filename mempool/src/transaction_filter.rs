@@ -10,6 +10,7 @@ use network::SimpleSender;
 use proto::{ContactsType, WLastType};
 use proto::defl::{ClientRequest, Response};
 use proto::defl::client_request::Method;
+use proto::defl::response::Status;
 
 use crate::batch_maker::Transaction;
 
@@ -66,7 +67,7 @@ impl TransactionFilter {
                             continue;
                         }
                         let response = Response {
-                            msg: String::from("OK"),
+                            stat: Status::Ok.into(),
                             request_uuid: client_request.request_uuid,
                             w_last: self.w_last.lock().unwrap().clone().into(),
                         };

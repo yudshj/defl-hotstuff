@@ -60,35 +60,35 @@ class IpcCommitter(Committer):
             logging.debug(f'Received {len(resp)} bytes')
             response = Response()
             response.ParseFromString(resp)
-            logging.debug(f'Trying to acquire lock for {response.request_uuid}')
+            logging.debug(f'{response.request_uuid} Trying to acquire lock')
             async with self.__response_map_lock:
-                logging.debug(f'Acquired lock for {response.request_uuid}')
+                logging.debug(f'{response.request_uuid} Acquired lock')
                 queue = self.__response_map[response.request_uuid]
-                logging.debug(f'Got queue for {response.request_uuid}')
-            logging.debug(f'Putting response in queue for {response.request_uuid}')
+                logging.debug(f'{response.request_uuid} Got queue')
+            logging.debug(f'{response.request_uuid} Putting response in queue')
             await queue.put(response)
-            logging.debug(f'Put response in queue for {response.request_uuid}')
+            logging.debug(f'{response.request_uuid} Put response in queue')
 
     async def transmit(self, client_request: ClientRequest) -> bool:
         msg = client_request.SerializeToString()
-        logging.info(f'Transmitting {client_request.request_uuid} with {len(msg)} bytes')
+        logging.info(f'{client_request.request_uuid} Transmitting with {len(msg)} bytes')
         await async_length_delimited_send(self.replica_tx, msg)
         resp = await async_length_delimited_recv(self.replica_rx)
         resp = resp.decode()
-        logging.info(f'Immediate response for {client_request.request_uuid}: {resp}')
+        logging.info(f'{client_request.request_uuid} Immediate response: {resp}')
         return resp == 'Ack'
 
     async def collect(self, request_uuid: str) -> Response:
-        logging.debug(f'Collecting response for {request_uuid}')
+        logging.debug(f'{request_uuid} Collecting response')
         response_queue = Queue(1)
-        logging.debug(f'Trying to acquire lock for {request_uuid}')
+        logging.debug(f'{request_uuid} Trying to acquire lock')
         async with self.__response_map_lock:
-            logging.debug(f'Acquired lock for {request_uuid}')
+            logging.debug(f'{request_uuid} Acquired lock')
             self.__response_map[request_uuid] = response_queue
-            logging.debug(f'Added {request_uuid} to response map')
-        logging.debug(f'Waiting for response for {request_uuid}')
+            logging.debug(f'{request_uuid} Put to response map')
+        logging.debug(f'{request_uuid} Waiting for response')
         response: Response = await response_queue.get()
-        logging.debug(f'Got response for {request_uuid}')
+        logging.debug(f'{request_uuid} Got response')
         assert type(response) == Response
         return response
 

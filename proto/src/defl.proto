@@ -27,7 +27,11 @@ message ClientRequest {
 }
 
 message Response {
-  string msg = 1;
+  enum Status {
+    OK = 0;
+    ERROR = 1;
+  }
+  Status stat = 1;
   string request_uuid = 2;
   map<string, bytes> w_last = 3;
 }
