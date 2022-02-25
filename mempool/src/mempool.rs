@@ -112,7 +112,11 @@ impl Mempool {
     }
 
     /// Spawn all tasks responsible to handle clients transactions.
-    fn handle_clients_transactions(&self, contacts: Arc<Mutex<ContactsType>>, w_last: Arc<Mutex<WLastType>>) {
+    fn handle_clients_transactions(
+        &self,
+        contacts: Arc<Mutex<ContactsType>>,
+        w_last: Arc<Mutex<WLastType>>,
+    ) {
         let (tx_filter, rx_filter) = channel(CHANNEL_CAPACITY);
         let (tx_batch_maker, rx_batch_maker) = channel(CHANNEL_CAPACITY);
         let (tx_quorum_waiter, rx_quorum_waiter) = channel(CHANNEL_CAPACITY);
@@ -124,10 +128,7 @@ impl Mempool {
             .transactions_address(&self.name)
             .expect("Our public key is not in the committee");
         address.set_ip("127.0.0.1".parse().unwrap());
-        NetworkReceiver::spawn(
-            address,
-            /* handler */ TxReceiverHandler { tx_filter },
-        );
+        NetworkReceiver::spawn(address, /* handler */ TxReceiverHandler { tx_filter });
 
         TransactionFilter::spawn(
             contacts,

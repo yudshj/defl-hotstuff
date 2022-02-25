@@ -1,7 +1,8 @@
 use anyhow::{Context, Result};
+use base64;
 use bytes::BufMut as _;
 use bytes::BytesMut;
-use clap::{crate_name, crate_version, App, AppSettings};
+use clap::{App, AppSettings, crate_name, crate_version};
 use env_logger::Env;
 use futures::future::join_all;
 use futures::sink::SinkExt as _;
@@ -9,9 +10,8 @@ use log::{info, warn};
 use rand::Rng;
 use std::net::SocketAddr;
 use tokio::net::TcpStream;
-use tokio::time::{interval, sleep, Duration, Instant};
+use tokio::time::{Duration, Instant, interval, sleep};
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
-use base64;
 
 #[tokio::main]
 async fn main() -> Result<()> {

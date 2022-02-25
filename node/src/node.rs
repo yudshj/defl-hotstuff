@@ -4,9 +4,9 @@ use crypto::SignatureService;
 use log::{info, warn};
 use mempool::{Mempool, MempoolMessage};
 use prost::Message;
-// Sync the mempool with the consensus and nodes.
 use proto::{ContactsType, WLastType};
 use proto::defl::*;
+// Sync the mempool with the consensus and nodes.
 use proto::defl::client_request::Method;
 use std::sync::{Arc, Mutex};
 use store::Store;
