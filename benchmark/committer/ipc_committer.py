@@ -114,8 +114,8 @@ class IpcCommitter(Committer):
             asyncio.create_task(self.connect_to_server()),
             asyncio.create_task(self.start_servers())))
 
-        # asyncio.create_task(self.active_server.serve_forever())
-        # asyncio.create_task(self.passive_server.serve_forever())
+        asyncio.create_task(self.active_server.serve_forever())
+        asyncio.create_task(self.passive_server.serve_forever())
         return await self.client_register()
 
     async def fetch_w_last(self) -> Response:
