@@ -1,15 +1,17 @@
-use async_trait::async_trait;
-use bytes::Bytes;
-use crypto::{Digest, PublicKey};
-use futures::sink::SinkExt as _;
-use log::{info, warn};
-use network::{MessageHandler, Receiver as NetworkReceiver, SimpleSender, Writer};
-use proto::{ContactsType, WLastType};
-use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::sync::{Arc, Mutex};
-use store::Store;
+
+use async_trait::async_trait;
+use bytes::Bytes;
+use futures::sink::SinkExt as _;
+use log::{info, warn};
+use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
+
+use crypto::{Digest, PublicKey};
+use network::{MessageHandler, Receiver as NetworkReceiver, SimpleSender, Writer};
+use proto::{ContactsType, WLastType};
+use store::Store;
 
 use crate::batch_maker::{Batch, BatchMaker, Transaction};
 use crate::config::{Committee, Parameters};
@@ -218,6 +220,7 @@ struct TxReceiverHandler {
 impl MessageHandler for TxReceiverHandler {
     async fn dispatch(&self, writer: &mut Writer, message: Bytes) -> Result<(), Box<dyn Error>> {
         info!("DONG: Sending Ack");
+        // Immediate response to the client.
         let _ = writer.send(Bytes::from("Ack")).await;
 
         // Send the transaction to the batch maker.

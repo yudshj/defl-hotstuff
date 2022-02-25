@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use anyhow::{Context, Result};
 use base64;
 use bytes::BufMut as _;
@@ -8,7 +10,6 @@ use futures::future::join_all;
 use futures::sink::SinkExt as _;
 use log::{info, warn};
 use rand::Rng;
-use std::net::SocketAddr;
 use tokio::net::TcpStream;
 use tokio::time::{Duration, Instant, interval, sleep};
 use tokio_util::codec::{Framed, LengthDelimitedCodec};

@@ -103,14 +103,17 @@ class Response(google.protobuf.message.Message):
         def ClearField(self, field_name: typing_extensions.Literal["key",b"key","value",b"value"]) -> None: ...
 
     MSG_FIELD_NUMBER: builtins.int
+    REQUEST_UUID_FIELD_NUMBER: builtins.int
     W_LAST_FIELD_NUMBER: builtins.int
     msg: typing.Text
+    request_uuid: typing.Text
     @property
     def w_last(self) -> google.protobuf.internal.containers.ScalarMap[typing.Text, builtins.bytes]: ...
     def __init__(self,
         *,
         msg: typing.Text = ...,
+        request_uuid: typing.Text = ...,
         w_last: typing.Optional[typing.Mapping[typing.Text, builtins.bytes]] = ...,
         ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["msg",b"msg","w_last",b"w_last"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["msg",b"msg","request_uuid",b"request_uuid","w_last",b"w_last"]) -> None: ...
 global___Response = Response

@@ -1,13 +1,15 @@
+use std::net::SocketAddr;
+use std::sync::{Arc, Mutex};
+
 use bytes::Bytes;
 use log::info;
-use network::SimpleSender;
 use prost::Message;
+use tokio::sync::mpsc::{Receiver, Sender};
+
+use network::SimpleSender;
 use proto::{ContactsType, WLastType};
 use proto::defl::{ClientRequest, Response};
 use proto::defl::client_request::Method;
-use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
-use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::batch_maker::Transaction;
 
@@ -65,6 +67,7 @@ impl TransactionFilter {
                         }
                         let response = Response {
                             msg: String::from("OK"),
+                            request_uuid: client_request.request_uuid,
                             w_last: self.w_last.lock().unwrap().clone().into(),
                         };
 

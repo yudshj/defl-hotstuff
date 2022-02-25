@@ -1,16 +1,18 @@
+use std::sync::{Arc, Mutex};
+
 use bytes::Bytes;
+use log::{info, warn};
+use prost::Message;
+use tokio::sync::mpsc::{channel, Receiver};
+
 use consensus::{Block, Consensus};
 use crypto::SignatureService;
-use log::{info, warn};
 use mempool::{Mempool, MempoolMessage};
-use prost::Message;
 use proto::{ContactsType, WLastType};
 use proto::defl::*;
 // Sync the mempool with the consensus and nodes.
 use proto::defl::client_request::Method;
-use std::sync::{Arc, Mutex};
 use store::Store;
-use tokio::sync::mpsc::{channel, Receiver};
 
 use crate::config::{Committee, ConfigError, Parameters, Secret};
 use crate::config::Export as _;
