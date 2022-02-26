@@ -4,12 +4,12 @@ import uuid
 from asyncio import Queue
 from typing import Dict
 
-from committer import Committer
-from committer.utils import async_length_delimited_recv, async_length_delimited_send
+# from defl.committer import Committer
+from defl.committer.utils import async_length_delimited_recv, async_length_delimited_send
 from proto.defl_pb2 import ClientRequest, Response, RegisterInfo
 
 
-class IpcCommitter(Committer):
+class IpcCommitter:
     def __init__(self,
                  client_name: str,
                  server_host: str,
@@ -17,7 +17,6 @@ class IpcCommitter(Committer):
                  tx_replica_timeout=1,
                  rx_replica_timeout=3600,
                  listen_backlog=5):
-        super().__init__()
         self.client_name = client_name
         self.server_host = server_host
         self.server_port = server_port
@@ -52,7 +51,7 @@ class IpcCommitter(Committer):
                 await asyncio.sleep(0.1)
         logging.info('Connected to server')
 
-    async def handle_active(self, reader, writer):
+    async def handle_active(self, reader, _writer):
         while True:
             logging.debug('Handling active connection')
             resp = await async_length_delimited_recv(reader)

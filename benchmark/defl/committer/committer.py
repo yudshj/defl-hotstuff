@@ -1,5 +1,7 @@
 import abc
+
 from proto.defl_pb2 import Response
+
 
 class Committer:
     def __init__(self):

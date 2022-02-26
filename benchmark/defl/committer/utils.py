@@ -1,5 +1,5 @@
-from asyncio import StreamReader, StreamWriter
 import socket
+from asyncio import StreamReader, StreamWriter
 
 
 def length_delimited_send(sock: socket.socket, data: bytes):

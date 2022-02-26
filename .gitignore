@@ -20,3 +20,4 @@ Cargo.lock
 **/*.rs.bk
 
 .idea
+/benchmark/defl/data/init_model.h5
