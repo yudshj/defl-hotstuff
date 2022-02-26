@@ -1,13 +1,16 @@
-use crate::config::Committee;
-use crate::consensus::Round;
-use crate::error::{ConsensusError, ConsensusResult};
-use crypto::{Digest, Hash, PublicKey, Signature, SignatureService};
-use ed25519_dalek::Digest as _;
-use ed25519_dalek::Sha512;
-use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::convert::TryInto;
 use std::fmt;
+
+use ed25519_dalek::Digest as _;
+use ed25519_dalek::Sha512;
+use serde::{Deserialize, Serialize};
+
+use crypto::{Digest, Hash, PublicKey, Signature, SignatureService};
+
+use crate::config::Committee;
+use crate::consensus::Round;
+use crate::error::{ConsensusError, ConsensusResult};
 
 #[cfg(test)]
 #[path = "tests/messages_tests.rs"]
@@ -72,7 +75,8 @@ impl Block {
         if let Some(ref tc) = self.tc {
             tc.verify(committee)?;
         }
-        // TODO: verify if a block valid
+
+        // TODO [Obsido]: verify if a block valid
         Ok(())
     }
 }

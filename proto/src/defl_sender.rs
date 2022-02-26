@@ -40,7 +40,7 @@ impl DeflSender {
         &mut self,
         client_name: String,
         response: Response,
-    ) -> Result<String, RespondError> {
+    ) -> Result<(), RespondError> {
         let host;
         let port;
         if let Some(register_info) = self.contacts.lock().unwrap().get(&client_name) {
@@ -54,7 +54,7 @@ impl DeflSender {
         let data: Vec<u8> = response.encode_to_vec();
         let address = SocketAddr::new(host.parse().unwrap(), port);
         self.sender.send(address, data.into()).await;
-        Ok(client_name)
+        Ok(())
     }
 
     pub async fn client_register(

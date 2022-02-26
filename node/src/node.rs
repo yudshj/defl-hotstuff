@@ -115,7 +115,6 @@ impl Node {
     pub async fn analyze_block(&mut self) {
         while let Some(block) = self.commit.recv().await {
             // This is where we can further process committed block.
-            // TODO: Here goes the application logic.
             for digest in block.payload {
                 let serialized_batch = self
                     .block_store
@@ -125,12 +124,10 @@ impl Node {
                     .expect("DONG: Digest not in `block_store`.");
                 // SerializedBatchMessage
                 if let Ok(MempoolMessage::Batch(batch)) =
-                bincode::deserialize(serialized_batch.as_slice())
+                    bincode::deserialize(serialized_batch.as_slice())
                 {
-                    info!("DONG: Start analyzing batch ...");
                     for client_tx in batch {
-                        // let tx_str = base64::encode(&client_tx);
-                        // info!("DONG: Analyze client tx: [{}].", tx_str);
+                        // info!("DONG: Analyze client tx: [{}].", base64::encode(&client_tx));
                         let client_request = ClientRequest::decode(Bytes::from(client_tx)).unwrap();
                         let ClientRequest {
                             method: _,
@@ -142,14 +139,14 @@ impl Node {
                         } = client_request;
                         let stat = match Method::from_i32(client_request.method) {
                             Some(Method::UpdWeights) => {
-                                info!("DONG: NEW_WEIGHTS received.");
+                                info!("DONG: UPD_WEIGHTS received.");
                                 if let Some(target_epoch_id) = client_request.target_epoch_id {
                                     if target_epoch_id == self.cur_node_info.epoch_id {
                                         if let Some(weights) = weights {
                                             self.cur_node_info
                                                 .client_weights
                                                 .insert(client_name.clone(), weights);
-                                            info!("DONG: `w_cur` updated.");
+                                            info!("DONG: UPD_WEIGHTS updated.");
                                             Status::Ok.into()
                                         } else {
                                             warn!("DONG: No `weights` field in request.");
@@ -181,6 +178,11 @@ impl Node {
                                                 Status::NotMeetQuorumWait.into()
                                             } else {
                                                 info!("DONG: Enough clients voted. Total weights: {}.", self.cur_node_info.client_weights.len());
+                                                self.cur_node_info.client_weights.iter().for_each(
+                                                    |(client_name, _)| {
+                                                        info!("        Client [{}].", client_name);
+                                                    },
+                                                );
                                                 self.last_node_info
                                                     .lock()
                                                     .unwrap()
@@ -220,22 +222,19 @@ impl Node {
                         };
                         match self
                             .defl_sender
-                            .respond_to_client(client_name, response)
+                            .respond_to_client(client_name.clone(), response)
                             .await
                         {
-                            Ok(client_name) => {
-                                info!("DONG: Sent response to client {}.", client_name);
+                            Ok(()) => {
+                                info!("DONG: Respond to [{}].", client_name)
                             }
-                            Err(respond_error) => {
-                                warn!("DONG: Failed to respond: {}", respond_error.msg);
+                            Err(_) => {
+                                warn!("DONG: Failed to respond [{}].", client_name)
                             }
                         }
                     }
-                    info!("DONG: End analyzing batch!");
                 }
             }
-            // TODO: respond to client
-            // TODO: 服务端 analyze 的时候通知 client (rust&python IPC)
         }
     }
 }

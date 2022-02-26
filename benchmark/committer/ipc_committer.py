@@ -70,11 +70,11 @@ class IpcCommitter(Committer):
 
     async def transmit(self, client_request: ClientRequest) -> bool:
         msg = client_request.SerializeToString()
-        logging.info(f'{client_request.request_uuid} Transmitting with {len(msg)} bytes')
+        logging.debug(f'Transmitting with {len(msg)} bytes')
         await async_length_delimited_send(self.replica_tx, msg)
         resp = await async_length_delimited_recv(self.replica_rx)
         resp = resp.decode()
-        logging.info(f'{client_request.request_uuid} Immediate response: {resp}')
+        logging.debug(f'Immediate response: {resp}')
         return resp == 'Ack'
 
     async def collect(self, request_uuid: str) -> Response:

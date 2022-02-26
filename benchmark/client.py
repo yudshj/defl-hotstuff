@@ -45,30 +45,37 @@ async def main():
     await committer.committer_bootstrap()
     last_weights = None
     for i in range(100):
-        w_last_resp = await committer.fetch_w_last()
-        logging.info(f'{w_last_resp.request_uuid} Collected: {Response.Status.Name(w_last_resp.stat)} with {w_last_resp.ByteSize()} bytes')
-        r_last_epoch_id = w_last_resp.r_last_epoch_id
+        logging.info("[LOOP %d] Current epoch id is %d. Fetching...", i, epoch_id)
+        resp = await committer.fetch_w_last()
+        logging.debug(f'Collected: {Response.Status.Name(resp.stat)} with {resp.ByteSize()} bytes')
+        r_last_epoch_id = resp.r_last_epoch_id
         if epoch_id <= r_last_epoch_id:
-            if client_name in w_last_resp.w_last:
-                assert w_last_resp.w_last[client_name] == last_weights
+            if client_name in resp.w_last:
+                assert resp.w_last[client_name] == last_weights
 
+            # local_train
+            logging.info("Local training...")
             await asyncio.sleep(args.train / 1000.0)
-
             cur_weights = random.randbytes(args.size)
-            logging.info("sending new weights")
-            r = await committer.new_weights(r_last_epoch_id + 1, cur_weights)
-            logging.info(f'{r.request_uuid} Collected: {Response.Status.Name(r.stat)} with {r.ByteSize()} bytes')
+
+            logging.info("Updating weights...")
+            resp = await committer.new_weights(r_last_epoch_id + 1, cur_weights)
+            logging.debug(f'Collected: {Response.Status.Name(resp.stat)} with {resp.ByteSize()} bytes')
             # assert r.stat == Response.Status.OK
             epoch_id = r_last_epoch_id + 1
             last_weights = cur_weights
 
+            # wait_for_GST
+            logging.info("Waiting for GST...")
             await asyncio.sleep(args.gst / 1000.0)
 
-            logging.info("sending new epoch request")
-            r = await committer.new_epoch_request(epoch_id)
-            logging.info(f'{r.request_uuid} Collected: {Response.Status.Name(r.stat)} with {r.ByteSize()} bytes')
+            logging.info("Voting new epoch...")
+            resp = await committer.new_epoch_request(epoch_id)
+            logging.debug(f'Collected: {Response.Status.Name(resp.stat)} with {resp.ByteSize()} bytes')
             # assert r.stat == Response.Status.OK or r.stat == Response.Status.NOT_MEET_QUORUM_WAIT
         else:
+            # fetch burst
+            logging.info("+++ Remote is not updated. Waiting for a next fetch...")
             await asyncio.sleep(args.fetch / 1000.0)
 
 
