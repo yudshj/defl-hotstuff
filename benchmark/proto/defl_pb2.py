@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ndefl.proto\x12\x04\x64\x65\x66l\"P\n\x0cRegisterInfo\x12\x0c\n\x04host\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\x05\x12\x11\n\tpasv_host\x18\x03 \x01(\t\x12\x11\n\tpasv_port\x18\x04 \x01(\x05\"\xcd\x02\n\rClientRequest\x12*\n\x06method\x18\x01 \x01(\x0e\x32\x1a.defl.ClientRequest.Method\x12\x14\n\x0crequest_uuid\x18\x02 \x01(\t\x12\x13\n\x0b\x63lient_name\x18\x03 \x01(\t\x12\x1c\n\x0ftarget_epoch_id\x18\x04 \x01(\x03H\x00\x88\x01\x01\x12\x14\n\x07weights\x18\x05 \x01(\x0cH\x01\x88\x01\x01\x12.\n\rregister_info\x18\x06 \x01(\x0b\x32\x12.defl.RegisterInfoH\x02\x88\x01\x01\"O\n\x06Method\x12\x10\n\x0c\x46\x45TCH_W_LAST\x10\x00\x12\x0f\n\x0bNEW_WEIGHTS\x10\x01\x12\r\n\tNEW_EPOCH\x10\x02\x12\x13\n\x0f\x43LIENT_REGISTER\x10\x07\x42\x12\n\x10_target_epoch_idB\n\n\x08_weightsB\x10\n\x0e_register_info\"\xbb\x01\n\x08Response\x12#\n\x04stat\x18\x01 \x01(\x0e\x32\x15.defl.Response.Status\x12\x14\n\x0crequest_uuid\x18\x02 \x01(\t\x12)\n\x06w_last\x18\x03 \x03(\x0b\x32\x19.defl.Response.WLastEntry\x1a,\n\nWLastEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x0c:\x02\x38\x01\"\x1b\n\x06Status\x12\x06\n\x02OK\x10\x00\x12\t\n\x05\x45RROR\x10\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ndefl.proto\x12\x04\x64\x65\x66l\"P\n\x0cRegisterInfo\x12\x0c\n\x04host\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\x05\x12\x11\n\tpasv_host\x18\x03 \x01(\t\x12\x11\n\tpasv_port\x18\x04 \x01(\x05\"\xd5\x02\n\rClientRequest\x12*\n\x06method\x18\x01 \x01(\x0e\x32\x1a.defl.ClientRequest.Method\x12\x14\n\x0crequest_uuid\x18\x02 \x01(\t\x12\x13\n\x0b\x63lient_name\x18\x03 \x01(\t\x12\x1c\n\x0ftarget_epoch_id\x18\x04 \x01(\x03H\x00\x88\x01\x01\x12\x14\n\x07weights\x18\x05 \x01(\x0cH\x01\x88\x01\x01\x12.\n\rregister_info\x18\x06 \x01(\x0b\x32\x12.defl.RegisterInfoH\x02\x88\x01\x01\"W\n\x06Method\x12\x10\n\x0c\x46\x45TCH_W_LAST\x10\x00\x12\x0f\n\x0bNEW_WEIGHTS\x10\x01\x12\x15\n\x11NEW_EPOCH_REQUEST\x10\x02\x12\x13\n\x0f\x43LIENT_REGISTER\x10\x07\x42\x12\n\x10_target_epoch_idB\n\n\x08_weightsB\x10\n\x0e_register_info\"\x80\x03\n\x08Response\x12#\n\x04stat\x18\x01 \x01(\x0e\x32\x15.defl.Response.Status\x12\x14\n\x0crequest_uuid\x18\x02 \x01(\t\x12\x1c\n\x0fr_last_epoch_id\x18\x03 \x01(\x03H\x00\x88\x01\x01\x12)\n\x06w_last\x18\x04 \x03(\x0b\x32\x19.defl.Response.WLastEntry\x1a,\n\nWLastEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x0c:\x02\x38\x01\"\xad\x01\n\x06Status\x12\x06\n\x02OK\x10\x00\x12\x18\n\x14NOT_MEET_QUORUM_WAIT\x10\x01\x12$\n UNEXPECTED_TARGET_EPOCH_ID_ERROR\x10\x02\x12\x1f\n\x1bNO_WEIGHTS_IN_REQUEST_ERROR\x10\x03\x12\x1e\n\x1a\x43LIENT_ALREADY_VOTED_ERROR\x10\x04\x12\x1a\n\x15SERVER_INTERNAL_ERROR\x10\x94\x03\x42\x12\n\x10_r_last_epoch_idb\x06proto3')
 
 
 
@@ -61,13 +61,13 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _REGISTERINFO._serialized_start=20
   _REGISTERINFO._serialized_end=100
   _CLIENTREQUEST._serialized_start=103
-  _CLIENTREQUEST._serialized_end=436
+  _CLIENTREQUEST._serialized_end=444
   _CLIENTREQUEST_METHOD._serialized_start=307
-  _CLIENTREQUEST_METHOD._serialized_end=386
-  _RESPONSE._serialized_start=439
-  _RESPONSE._serialized_end=626
-  _RESPONSE_WLASTENTRY._serialized_start=553
-  _RESPONSE_WLASTENTRY._serialized_end=597
-  _RESPONSE_STATUS._serialized_start=599
-  _RESPONSE_STATUS._serialized_end=626
+  _CLIENTREQUEST_METHOD._serialized_end=394
+  _RESPONSE._serialized_start=447
+  _RESPONSE._serialized_end=831
+  _RESPONSE_WLASTENTRY._serialized_start=591
+  _RESPONSE_WLASTENTRY._serialized_end=635
+  _RESPONSE_STATUS._serialized_start=638
+  _RESPONSE_STATUS._serialized_end=811
 # @@protoc_insertion_point(module_scope)

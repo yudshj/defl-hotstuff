@@ -143,7 +143,7 @@ class IpcCommitter(Committer):
 
     async def new_epoch_request(self, target_epoch_id: int) -> Response:
         client_request = ClientRequest(
-            method=ClientRequest.Method.NEW_EPOCH,
+            method=ClientRequest.Method.NEW_EPOCH_REQUEST,
             request_uuid=str(uuid.uuid4()),
             client_name=self.client_name,
             target_epoch_id=target_epoch_id,

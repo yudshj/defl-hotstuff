@@ -41,7 +41,7 @@ class ClientRequest(google.protobuf.message.Message):
         DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
         FETCH_W_LAST: ClientRequest._Method.ValueType  # 0
         NEW_WEIGHTS: ClientRequest._Method.ValueType  # 1
-        NEW_EPOCH: ClientRequest._Method.ValueType  # 2
+        NEW_EPOCH_REQUEST: ClientRequest._Method.ValueType  # 2
         CLIENT_REGISTER: ClientRequest._Method.ValueType  # 7
         """Registration"""
 
@@ -50,7 +50,7 @@ class ClientRequest(google.protobuf.message.Message):
 
     FETCH_W_LAST: ClientRequest.Method.ValueType  # 0
     NEW_WEIGHTS: ClientRequest.Method.ValueType  # 1
-    NEW_EPOCH: ClientRequest.Method.ValueType  # 2
+    NEW_EPOCH_REQUEST: ClientRequest.Method.ValueType  # 2
     CLIENT_REGISTER: ClientRequest.Method.ValueType  # 7
     """Registration"""
 
@@ -95,12 +95,20 @@ class Response(google.protobuf.message.Message):
     class _StatusEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[Response._Status.ValueType], builtins.type):
         DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
         OK: Response._Status.ValueType  # 0
-        ERROR: Response._Status.ValueType  # 1
+        NOT_MEET_QUORUM_WAIT: Response._Status.ValueType  # 1
+        UNEXPECTED_TARGET_EPOCH_ID_ERROR: Response._Status.ValueType  # 2
+        NO_WEIGHTS_IN_REQUEST_ERROR: Response._Status.ValueType  # 3
+        CLIENT_ALREADY_VOTED_ERROR: Response._Status.ValueType  # 4
+        SERVER_INTERNAL_ERROR: Response._Status.ValueType  # 404
     class Status(_Status, metaclass=_StatusEnumTypeWrapper):
         pass
 
     OK: Response.Status.ValueType  # 0
-    ERROR: Response.Status.ValueType  # 1
+    NOT_MEET_QUORUM_WAIT: Response.Status.ValueType  # 1
+    UNEXPECTED_TARGET_EPOCH_ID_ERROR: Response.Status.ValueType  # 2
+    NO_WEIGHTS_IN_REQUEST_ERROR: Response.Status.ValueType  # 3
+    CLIENT_ALREADY_VOTED_ERROR: Response.Status.ValueType  # 4
+    SERVER_INTERNAL_ERROR: Response.Status.ValueType  # 404
 
     class WLastEntry(google.protobuf.message.Message):
         DESCRIPTOR: google.protobuf.descriptor.Descriptor
@@ -117,16 +125,21 @@ class Response(google.protobuf.message.Message):
 
     STAT_FIELD_NUMBER: builtins.int
     REQUEST_UUID_FIELD_NUMBER: builtins.int
+    R_LAST_EPOCH_ID_FIELD_NUMBER: builtins.int
     W_LAST_FIELD_NUMBER: builtins.int
     stat: global___Response.Status.ValueType
     request_uuid: typing.Text
+    r_last_epoch_id: builtins.int
     @property
     def w_last(self) -> google.protobuf.internal.containers.ScalarMap[typing.Text, builtins.bytes]: ...
     def __init__(self,
         *,
         stat: global___Response.Status.ValueType = ...,
         request_uuid: typing.Text = ...,
+        r_last_epoch_id: typing.Optional[builtins.int] = ...,
         w_last: typing.Optional[typing.Mapping[typing.Text, builtins.bytes]] = ...,
         ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["request_uuid",b"request_uuid","stat",b"stat","w_last",b"w_last"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["_r_last_epoch_id",b"_r_last_epoch_id","r_last_epoch_id",b"r_last_epoch_id"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["_r_last_epoch_id",b"_r_last_epoch_id","r_last_epoch_id",b"r_last_epoch_id","request_uuid",b"request_uuid","stat",b"stat","w_last",b"w_last"]) -> None: ...
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_r_last_epoch_id",b"_r_last_epoch_id"]) -> typing.Optional[typing_extensions.Literal["r_last_epoch_id"]]: ...
 global___Response = Response

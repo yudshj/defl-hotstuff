@@ -25,27 +25,52 @@ async def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('host', help='host', type=str)
-    parser.add_argument('--size', default='1024000',
+    parser.add_argument('--size', default='1024',
                         help='size of file to send', type=int)
-    parser.add_argument('--rate', default='4',
-                        help='rate of sending', type=int)
+    parser.add_argument('--train', default='500',
+                        help='train time in milliseconds', type=int)
+    parser.add_argument('--gst', default='2000',
+                        help='train time in milliseconds', type=int)
+    parser.add_argument('--fetch', default='500',
+                        help='train time in milliseconds', type=int)
     parser.add_argument('--timeout', default='1000',
                         help='timeout of sending (miliseconds)', type=int)
 
     args = parser.parse_args()
     h, p = args.host.split(':')
 
-    r = random.randint(1, 1000000000)
-    duration = 1.0 / args.rate
+    epoch_id = -1
     client_name = str(uuid.uuid4())
     committer = IpcCommitter(client_name, h, int(p), args.timeout / 1000.0)
     await committer.committer_bootstrap()
-    while True:
-        r += 1
-        response = await committer.fetch_w_last()
-        # logging.info(f'\n++++++++++++ [Collect] +++++++++++++\n{response}++++++++++++++++++++++++++++++++++++')
-        logging.info(f'{response.request_uuid} Collected: {Response.Status.Name(response.stat)} with {response.ByteSize()} bytes')
-        await asyncio.sleep(duration)
+    last_weights = None
+    for i in range(100):
+        w_last_resp = await committer.fetch_w_last()
+        logging.info(f'{w_last_resp.request_uuid} Collected: {Response.Status.Name(w_last_resp.stat)} with {w_last_resp.ByteSize()} bytes')
+        r_last_epoch_id = w_last_resp.r_last_epoch_id
+        if epoch_id <= r_last_epoch_id:
+            if client_name in w_last_resp.w_last:
+                assert w_last_resp.w_last[client_name] == last_weights
+
+            await asyncio.sleep(args.train / 1000.0)
+
+            cur_weights = random.randbytes(args.size)
+            logging.info("sending new weights")
+            r = await committer.new_weights(r_last_epoch_id + 1, cur_weights)
+            logging.info(f'{r.request_uuid} Collected: {Response.Status.Name(r.stat)} with {r.ByteSize()} bytes')
+            assert r.stat == Response.Status.OK
+            epoch_id = r_last_epoch_id + 1
+            last_weights = cur_weights
+
+            await asyncio.sleep(args.gst / 1000.0)
+
+            logging.info("sending new epoch request")
+            r = await committer.new_epoch_request(epoch_id)
+            logging.info(f'{r.request_uuid} Collected: {Response.Status.Name(r.stat)} with {r.ByteSize()} bytes')
+            assert r.stat == Response.Status.OK or r.stat == Response.Status.NOT_MEET_QUORUM_WAIT
+        else:
+            await asyncio.sleep(args.fetch / 1000.0)
+
 
 if __name__ == '__main__':
     asyncio.run(main())

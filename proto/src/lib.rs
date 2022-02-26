@@ -1,20 +1,22 @@
 use std::collections::HashMap;
 
+pub mod defl_sender;
+
 pub mod defl {
     include!(concat!(env!("OUT_DIR"), "/defl.rs"));
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct RegisterInfo {
+pub struct SimpleRegisterInfo {
     pub host: String,
     pub port: u16,
     pub pasv_host: String,
     pub pasv_port: u16,
 }
 
-impl Into<RegisterInfo> for defl::RegisterInfo {
-    fn into(self) -> RegisterInfo {
-        RegisterInfo {
+impl Into<SimpleRegisterInfo> for defl::RegisterInfo {
+    fn into(self) -> SimpleRegisterInfo {
+        SimpleRegisterInfo {
             host: self.host,
             port: self.port as u16,
             pasv_host: self.pasv_host,
@@ -23,5 +25,19 @@ impl Into<RegisterInfo> for defl::RegisterInfo {
     }
 }
 
-pub type WLastType = HashMap<String, Vec<u8>>;
-pub type ContactsType = HashMap<String, RegisterInfo>;
+pub type ClientWeightsType = HashMap<String, Vec<u8>>;
+
+#[derive(Debug, Clone)]
+pub struct NodeInfo {
+    pub client_weights: ClientWeightsType,
+    pub epoch_id: i64,
+}
+
+impl NodeInfo {
+    pub fn new(init_epoch_id: i64) -> NodeInfo {
+        NodeInfo {
+            client_weights: HashMap::new(),
+            epoch_id: init_epoch_id,
+        }
+    }
+}

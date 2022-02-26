@@ -1,17 +1,22 @@
-mod config;
-mod node;
+use std::fs;
 
-use crate::config::Export as _;
-use crate::config::{Committee, Secret};
-use crate::node::Node;
-use clap::{crate_name, crate_version, App, AppSettings, SubCommand};
-use consensus::Committee as ConsensusCommittee;
+use clap::{App, AppSettings, crate_name, crate_version, SubCommand};
 use env_logger::Env;
 use futures::future::join_all;
 use log::error;
-use mempool::Committee as MempoolCommittee;
-use std::fs;
 use tokio::task::JoinHandle;
+
+use consensus::Committee as ConsensusCommittee;
+use mempool::Committee as MempoolCommittee;
+
+use crate::config::{Committee, Secret};
+use crate::config::Export as _;
+use crate::node::Node;
+
+mod config;
+mod node;
+
+const QUORUM_SIZE: usize = 3;
 
 #[tokio::main]
 async fn main() {
@@ -64,13 +69,21 @@ async fn main() {
             let committee_file = subm.value_of("committee").unwrap();
             let parameters_file = subm.value_of("parameters");
             let store_path = subm.value_of("store").unwrap();
-            match Node::new(committee_file, key_file, store_path, parameters_file).await {
+            match Node::new(
+                committee_file,
+                key_file,
+                store_path,
+                parameters_file,
+                QUORUM_SIZE,
+            )
+                .await
+            {
                 Ok(mut node) => {
                     tokio::spawn(async move {
                         node.analyze_block().await;
                     })
-                    .await
-                    .expect("Failed to analyze committed blocks");
+                        .await
+                        .expect("Failed to analyze committed blocks");
                 }
                 Err(e) => error!("{}", e),
             }
@@ -141,7 +154,7 @@ fn deploy_testbed(nodes: usize) -> Result<Vec<JoinHandle<()>>, Box<dyn std::erro
             let _ = fs::remove_dir_all(&store_path);
 
             Ok(tokio::spawn(async move {
-                match Node::new(committee_file, &key_file, &store_path, None).await {
+                match Node::new(committee_file, &key_file, &store_path, None, QUORUM_SIZE).await {
                     Ok(mut node) => {
                         // Sink the commit channel.
                         while node.commit.recv().await.is_some() {}

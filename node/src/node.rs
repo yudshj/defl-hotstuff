@@ -1,3 +1,4 @@
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
 use bytes::Bytes;
@@ -8,10 +9,13 @@ use tokio::sync::mpsc::{channel, Receiver};
 use consensus::{Block, Consensus};
 use crypto::SignatureService;
 use mempool::{Mempool, MempoolMessage};
-use proto::{ContactsType, WLastType};
+use network::SimpleSender;
 use proto::defl::*;
 // Sync the mempool with the consensus and nodes.
 use proto::defl::client_request::Method;
+use proto::defl::response::Status;
+use proto::defl_sender::DeflSender;
+use proto::NodeInfo;
 use store::Store;
 
 use crate::config::{Committee, ConfigError, Parameters, Secret};
@@ -23,8 +27,11 @@ pub const CHANNEL_CAPACITY: usize = 1_000;
 pub struct Node {
     pub commit: Receiver<Block>,
     pub block_store: Store,
-    pub contacts: Arc<Mutex<ContactsType>>,
-    pub w_last: Arc<Mutex<WLastType>>,
+    last_node_info: Arc<Mutex<NodeInfo>>,
+    cur_node_info: NodeInfo,
+    voted_clients: HashSet<String>,
+    defl_sender: DeflSender,
+    quorum: usize,
 }
 
 impl Node {
@@ -33,6 +40,7 @@ impl Node {
         key_file: &str,
         store_path: &str,
         parameters: Option<&str>,
+        quorum: usize,
     ) -> Result<Self, ConfigError> {
         let (tx_commit, rx_commit) = channel(CHANNEL_CAPACITY);
         let (tx_consensus_to_mempool, rx_consensus_to_mempool) = channel(CHANNEL_CAPACITY);
@@ -54,8 +62,9 @@ impl Node {
         let store = Store::new(store_path).expect("Failed to create store");
 
         // Make DeFL components.
-        let contacts = Arc::new(Mutex::new(ContactsType::new()));
-        let w_last = Arc::new(Mutex::new(WLastType::new()));
+        let defl_sender = DeflSender::new();
+        let cur_node_info = NodeInfo::new(0);
+        let last_node_info = Arc::new(Mutex::new(NodeInfo::new(-1)));
 
         // Run the signature service.
         let signature_service = SignatureService::new(secret_key);
@@ -68,8 +77,11 @@ impl Node {
             store.clone(),
             rx_consensus_to_mempool,
             tx_mempool_to_consensus,
-            contacts.clone(),
-            w_last.clone(),
+            DeflSender {
+                sender: SimpleSender::new(),
+                contacts: defl_sender.contacts.clone(),
+            },
+            last_node_info.clone(),
         );
 
         // Run the consensus core.
@@ -88,8 +100,11 @@ impl Node {
         Ok(Self {
             commit: rx_commit,
             block_store: store,
-            contacts,
-            w_last,
+            last_node_info,
+            cur_node_info,
+            voted_clients: HashSet::new(),
+            defl_sender,
+            quorum,
         })
     }
 
@@ -119,15 +134,107 @@ impl Node {
                         info!("DONG: Analyze client tx: [{}].", tx_str);
 
                         let client_request = ClientRequest::decode(Bytes::from(client_tx)).unwrap();
-                        match Method::from_i32(client_request.method) {
+                        let ClientRequest {
+                            method: _,
+                            request_uuid,
+                            client_name,
+                            target_epoch_id: _,
+                            weights,
+                            register_info: _,
+                        } = client_request;
+                        let stat = match Method::from_i32(client_request.method) {
                             Some(Method::NewWeights) => {
-                                info!("DONG:");
+                                info!("DONG: NEW_WEIGHTS received.");
+                                if let Some(target_epoch_id) = client_request.target_epoch_id {
+                                    if target_epoch_id == self.cur_node_info.epoch_id {
+                                        if let Some(weights) = weights {
+                                            self.cur_node_info
+                                                .client_weights
+                                                .insert(client_name.clone(), weights);
+                                            info!("DONG: `w_cur` updated.");
+                                            Status::Ok.into()
+                                        } else {
+                                            warn!("DONG: No `weights` field in request.");
+                                            Status::NoWeightsInRequestError.into()
+                                        }
+                                    } else {
+                                        warn!("DONG: `target_epoch_id` is not correct.");
+                                        Status::UnexpectedTargetEpochIdError.into()
+                                    }
+                                } else {
+                                    warn!("DONG: No `target_epoch_id` field in request.");
+                                    Status::UnexpectedTargetEpochIdError.into()
+                                }
                             }
-                            Some(Method::NewEpoch) => {
-                                info!("DONG:");
+                            Some(Method::NewEpochRequest) => {
+                                info!("DONG: NEW_EPOCH_REQUEST received.");
+                                if let Some(target_epoch_id) = client_request.target_epoch_id {
+                                    if target_epoch_id == self.cur_node_info.epoch_id {
+                                        if self.voted_clients.insert(client_name.clone()) {
+                                            info!("DONG: Client [{}] voted.", client_name);
+
+                                            // check meet quorum
+                                            if self.voted_clients.len() < self.quorum {
+                                                info!(
+                                                    "DONG: Not enough clients voted: {} / {}.",
+                                                    self.voted_clients.len(),
+                                                    self.quorum
+                                                );
+                                                Status::NotMeetQuorumWait.into()
+                                            } else {
+                                                info!("DONG: Enough clients voted.");
+                                                self.last_node_info
+                                                    .lock()
+                                                    .unwrap()
+                                                    .clone_from(&self.cur_node_info);
+                                                self.cur_node_info.epoch_id += 1;
+                                                self.cur_node_info.client_weights.clear();
+                                                self.voted_clients.clear();
+                                                info!("DONG: `cur_node_info` updated.");
+                                                Status::Ok.into()
+                                            }
+                                        } else {
+                                            warn!(
+                                                "DONG: Client [{}] has already voted.",
+                                                client_name
+                                            );
+                                            Status::ClientAlreadyVotedError.into()
+                                        }
+                                    } else {
+                                        warn!("DONG: `target_epoch_id` is not correct.");
+                                        Status::UnexpectedTargetEpochIdError.into()
+                                    }
+                                } else {
+                                    warn!("DONG: No `target_epoch_id` field in request.");
+                                    Status::UnexpectedTargetEpochIdError.into()
+                                }
                             }
                             _ => {
-                                warn!("DONG: Block should be filtered out previously")
+                                warn!("DONG: Block should be filtered out previously. Ignoring...");
+                                Status::ServerInternalError.into()
+                            }
+                        };
+                        let response = Response {
+                            stat,
+                            request_uuid,
+                            w_last: HashMap::new(),
+                            r_last_epoch_id: None,
+                        };
+                        info!(
+                            "DONG: Sending response to client [{}] with {} bytes.",
+                            client_name,
+                            response.encoded_len()
+                        );
+                        match self
+                            .defl_sender
+                            .respond_to_client(client_name, response)
+                            .await
+                        {
+                            Ok(client_name) => {
+                                info!("DONG: Send response to client {}.", client_name);
+                            }
+                            Err(respond_error) => {
+                                warn!("DONG: Failed to respond: {}", respond_error.msg);
                             }
                         }
                     }

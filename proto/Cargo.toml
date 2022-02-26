@@ -11,5 +11,7 @@ bytes = "0.6.0"
 # Only necessary if using Protobuf well-known types:
 prost-types = "0.9.0"
 
+network = { path = '../network' }
+
 [build-dependencies]
 prost-build = { version = "0.9" }

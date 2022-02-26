@@ -1,7 +1,10 @@
-use super::*;
-use crate::common::{batch_digest, committee_with_base_port, keys, listener, transaction};
-use network::SimpleSender;
 use std::fs;
+
+use network::SimpleSender;
+
+use crate::common::{batch_digest, committee_with_base_port, keys, listener, transaction};
+
+use super::*;
 
 #[tokio::test]
 async fn handle_clients_transactions() {
@@ -28,7 +31,7 @@ async fn handle_clients_transactions() {
         rx_consensus_to_mempool,
         tx_mempool_to_consensus,
         Arc::new(Mutex::new(ContactsType::new())),
-        Arc::new(Mutex::new(WLastType::new())),
+        Arc::new(Mutex::new(ClientWeightsType::new())),
     );
 
     // Spawn enough mempools' listeners to acknowledge our batches.

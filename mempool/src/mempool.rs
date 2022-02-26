@@ -9,8 +9,9 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 use crypto::{Digest, PublicKey};
-use network::{MessageHandler, Receiver as NetworkReceiver, SimpleSender, Writer};
-use proto::{ContactsType, WLastType};
+use network::{MessageHandler, Receiver as NetworkReceiver, Writer};
+use proto::defl_sender::DeflSender;
+use proto::NodeInfo;
 use store::Store;
 
 use crate::batch_maker::{Batch, BatchMaker, Transaction};
@@ -68,8 +69,8 @@ impl Mempool {
         store: Store,
         rx_consensus: Receiver<ConsensusMempoolMessage>,
         tx_consensus: Sender<Digest>,
-        contacts: Arc<Mutex<ContactsType>>,
-        w_last: Arc<Mutex<WLastType>>,
+        defl_sender: DeflSender,
+        node_info: Arc<Mutex<NodeInfo>>,
     ) {
         // NOTE: This log entry is used to compute performance.
         parameters.log();
@@ -85,7 +86,7 @@ impl Mempool {
 
         // Spawn all mempool tasks.
         mempool.handle_consensus_messages(rx_consensus);
-        mempool.handle_clients_transactions(contacts, w_last);
+        mempool.handle_clients_transactions(defl_sender, node_info);
         mempool.handle_mempool_messages();
 
         info!(
@@ -116,8 +117,8 @@ impl Mempool {
     /// Spawn all tasks responsible to handle clients transactions.
     fn handle_clients_transactions(
         &self,
-        contacts: Arc<Mutex<ContactsType>>,
-        w_last: Arc<Mutex<WLastType>>,
+        defl_sender: DeflSender,
+        node_info: Arc<Mutex<NodeInfo>>,
     ) {
         let (tx_filter, rx_filter) = channel(CHANNEL_CAPACITY);
         let (tx_batch_maker, rx_batch_maker) = channel(CHANNEL_CAPACITY);
@@ -132,13 +133,7 @@ impl Mempool {
         address.set_ip("127.0.0.1".parse().unwrap());
         NetworkReceiver::spawn(address, /* handler */ TxReceiverHandler { tx_filter });
 
-        TransactionFilter::spawn(
-            contacts,
-            w_last,
-            rx_filter,
-            tx_batch_maker,
-            SimpleSender::new(),
-        );
+        TransactionFilter::spawn(defl_sender, node_info, rx_filter, tx_batch_maker);
 
         // The transactions are sent to the `BatchMaker` that assembles them into batches. It then broadcasts
         // (in a reliable manner) the batches to all other mempools that share the same `id` as us. Finally,

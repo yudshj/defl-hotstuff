@@ -1,97 +1,79 @@
-use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 
 use bytes::Bytes;
-use log::info;
+use log::{info, warn};
 use prost::Message;
 use tokio::sync::mpsc::{Receiver, Sender};
 
-use network::SimpleSender;
-use proto::{ContactsType, WLastType};
 use proto::defl::{ClientRequest, Response};
 use proto::defl::client_request::Method;
 use proto::defl::response::Status;
+use proto::defl_sender::DeflSender;
+use proto::NodeInfo;
 
 use crate::batch_maker::Transaction;
 
 pub struct TransactionFilter {
-    contacts: Arc<Mutex<ContactsType>>,
-    w_last: Arc<Mutex<WLastType>>,
+    node_info: Arc<Mutex<NodeInfo>>,
     rx_filter: Receiver<Transaction>,
     tx_batch_maker: Sender<Transaction>,
-    sender: SimpleSender,
 }
 
 impl TransactionFilter {
     pub fn spawn(
-        contacts: Arc<Mutex<ContactsType>>,
-        w_last: Arc<Mutex<WLastType>>,
+        defl_sender: DeflSender,
+        node_info: Arc<Mutex<NodeInfo>>,
         rx_filter: Receiver<Transaction>,
         tx_batch_maker: Sender<Transaction>,
-        sender: SimpleSender,
     ) {
         tokio::spawn(async move {
             Self {
-                contacts,
-                w_last,
+                node_info,
                 rx_filter,
                 tx_batch_maker,
-                sender,
             }
-                .run()
+                .run(defl_sender)
                 .await;
         });
     }
 
-    async fn run(&mut self) {
+    async fn run(&mut self, mut defl_sender: DeflSender) {
         loop {
             // Assemble client transactions into batches of preset size.
             if let Some(transaction) = self.rx_filter.recv().await {
                 // Filter out transactions
                 let client_request =
                     ClientRequest::decode(Bytes::from(transaction.clone())).unwrap();
-                match Method::from_i32(client_request.method) {
+                let ClientRequest {
+                    method,
+                    request_uuid,
+                    client_name,
+                    target_epoch_id: _,
+                    weights: _,
+                    register_info,
+                } = client_request;
+                match Method::from_i32(method) {
                     Some(Method::FetchWLast) => {
-                        let host;
-                        let port;
-                        if let Some(register_info) = self
-                            .contacts
-                            .lock()
-                            .unwrap()
-                            .get(&client_request.client_name)
-                        {
-                            host = register_info.host.clone();
-                            port = register_info.port.clone();
-                        } else {
-                            info!("{} is not registered", client_request.client_name);
-                            continue;
-                        }
+                        let node_info = self.node_info.lock().unwrap().clone();
                         let response = Response {
                             stat: Status::Ok.into(),
-                            request_uuid: client_request.request_uuid,
-                            w_last: self.w_last.lock().unwrap().clone().into(),
+                            request_uuid,
+                            w_last: node_info.client_weights,
+                            r_last_epoch_id: Option::from(node_info.epoch_id),
                         };
-
-                        let data = response.encode_to_vec();
-                        let address = SocketAddr::new(host.parse().unwrap(), port);
-                        self.sender.send(address, Bytes::from(data)).await;
-                        info!(
-                            "DONG: sent {} bytes to {} - {}:{}",
-                            response.encoded_len(),
-                            client_request.client_name,
-                            host,
-                            port
-                        );
+                        match defl_sender
+                            .respond_to_client(client_name.clone(), response)
+                            .await
+                        {
+                            Ok(_) => info!("Responded `w_last` to client {}", client_name),
+                            Err(_) => warn!("Failed to respond `w_last` to client {}", client_name),
+                        }
                     }
                     Some(Method::ClientRegister) => {
-                        // info!("DONG:");
-                        if let Some(register_info) = client_request.register_info {
-                            self.contacts
-                                .lock()
-                                .unwrap()
-                                .insert(client_request.client_name.clone(), register_info.into());
-                            info!("DONG: client {} registered", client_request.client_name);
-                            info!("DONG: {:?}", self.contacts.lock().unwrap().clone());
+                        if let Some(register_info) = register_info {
+                            defl_sender
+                                .client_register(client_name, register_info.into())
+                                .await;
                         }
                     }
                     _ => {
