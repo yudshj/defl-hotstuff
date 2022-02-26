@@ -58,7 +58,7 @@ async def main():
             logging.info("sending new weights")
             r = await committer.new_weights(r_last_epoch_id + 1, cur_weights)
             logging.info(f'{r.request_uuid} Collected: {Response.Status.Name(r.stat)} with {r.ByteSize()} bytes')
-            assert r.stat == Response.Status.OK
+            # assert r.stat == Response.Status.OK
             epoch_id = r_last_epoch_id + 1
             last_weights = cur_weights
 
@@ -67,7 +67,7 @@ async def main():
             logging.info("sending new epoch request")
             r = await committer.new_epoch_request(epoch_id)
             logging.info(f'{r.request_uuid} Collected: {Response.Status.Name(r.stat)} with {r.ByteSize()} bytes')
-            assert r.stat == Response.Status.OK or r.stat == Response.Status.NOT_MEET_QUORUM_WAIT
+            # assert r.stat == Response.Status.OK or r.stat == Response.Status.NOT_MEET_QUORUM_WAIT
         else:
             await asyncio.sleep(args.fetch / 1000.0)
 

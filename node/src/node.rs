@@ -129,10 +129,8 @@ impl Node {
                 {
                     info!("DONG: Start analyzing batch ...");
                     for client_tx in batch {
-                        // TODO: Here we process TXs.
-                        let tx_str = base64::encode(&client_tx);
-                        info!("DONG: Analyze client tx: [{}].", tx_str);
-
+                        // let tx_str = base64::encode(&client_tx);
+                        // info!("DONG: Analyze client tx: [{}].", tx_str);
                         let client_request = ClientRequest::decode(Bytes::from(client_tx)).unwrap();
                         let ClientRequest {
                             method: _,
@@ -143,7 +141,7 @@ impl Node {
                             register_info: _,
                         } = client_request;
                         let stat = match Method::from_i32(client_request.method) {
-                            Some(Method::NewWeights) => {
+                            Some(Method::UpdWeights) => {
                                 info!("DONG: NEW_WEIGHTS received.");
                                 if let Some(target_epoch_id) = client_request.target_epoch_id {
                                     if target_epoch_id == self.cur_node_info.epoch_id {
@@ -158,12 +156,12 @@ impl Node {
                                             Status::NoWeightsInRequestError.into()
                                         }
                                     } else {
-                                        warn!("DONG: `target_epoch_id` is not correct.");
-                                        Status::UnexpectedTargetEpochIdError.into()
+                                        warn!("DONG: UNEXPECTED_EPOCH_ID {}", client_name);
+                                        Status::UwTargetEpochIdError.into()
                                     }
                                 } else {
                                     warn!("DONG: No `target_epoch_id` field in request.");
-                                    Status::UnexpectedTargetEpochIdError.into()
+                                    Status::UwTargetEpochIdError.into()
                                 }
                             }
                             Some(Method::NewEpochRequest) => {
@@ -182,7 +180,7 @@ impl Node {
                                                 );
                                                 Status::NotMeetQuorumWait.into()
                                             } else {
-                                                info!("DONG: Enough clients voted.");
+                                                info!("DONG: Enough clients voted. Total weights: {}.", self.cur_node_info.client_weights.len());
                                                 self.last_node_info
                                                     .lock()
                                                     .unwrap()
@@ -201,12 +199,12 @@ impl Node {
                                             Status::ClientAlreadyVotedError.into()
                                         }
                                     } else {
-                                        warn!("DONG: `target_epoch_id` is not correct.");
-                                        Status::UnexpectedTargetEpochIdError.into()
+                                        warn!("DONG: UNEXPECTED_EPOCH_ID {}", client_name);
+                                        Status::NerTargetEpochIdError.into()
                                     }
                                 } else {
                                     warn!("DONG: No `target_epoch_id` field in request.");
-                                    Status::UnexpectedTargetEpochIdError.into()
+                                    Status::NerTargetEpochIdError.into()
                                 }
                             }
                             _ => {
@@ -220,18 +218,13 @@ impl Node {
                             w_last: HashMap::new(),
                             r_last_epoch_id: None,
                         };
-                        info!(
-                            "DONG: Sending response to client [{}] with {} bytes.",
-                            client_name,
-                            response.encoded_len()
-                        );
                         match self
                             .defl_sender
                             .respond_to_client(client_name, response)
                             .await
                         {
                             Ok(client_name) => {
-                                info!("DONG: Send response to client {}.", client_name);
+                                info!("DONG: Sent response to client {}.", client_name);
                             }
                             Err(respond_error) => {
                                 warn!("DONG: Failed to respond: {}", respond_error.msg);

@@ -40,7 +40,7 @@ class ClientRequest(google.protobuf.message.Message):
     class _MethodEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[ClientRequest._Method.ValueType], builtins.type):
         DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
         FETCH_W_LAST: ClientRequest._Method.ValueType  # 0
-        NEW_WEIGHTS: ClientRequest._Method.ValueType  # 1
+        UPD_WEIGHTS: ClientRequest._Method.ValueType  # 1
         NEW_EPOCH_REQUEST: ClientRequest._Method.ValueType  # 2
         CLIENT_REGISTER: ClientRequest._Method.ValueType  # 7
         """Registration"""
@@ -49,7 +49,7 @@ class ClientRequest(google.protobuf.message.Message):
         pass
 
     FETCH_W_LAST: ClientRequest.Method.ValueType  # 0
-    NEW_WEIGHTS: ClientRequest.Method.ValueType  # 1
+    UPD_WEIGHTS: ClientRequest.Method.ValueType  # 1
     NEW_EPOCH_REQUEST: ClientRequest.Method.ValueType  # 2
     CLIENT_REGISTER: ClientRequest.Method.ValueType  # 7
     """Registration"""
@@ -96,19 +96,21 @@ class Response(google.protobuf.message.Message):
         DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
         OK: Response._Status.ValueType  # 0
         NOT_MEET_QUORUM_WAIT: Response._Status.ValueType  # 1
-        UNEXPECTED_TARGET_EPOCH_ID_ERROR: Response._Status.ValueType  # 2
-        NO_WEIGHTS_IN_REQUEST_ERROR: Response._Status.ValueType  # 3
-        CLIENT_ALREADY_VOTED_ERROR: Response._Status.ValueType  # 4
-        SERVER_INTERNAL_ERROR: Response._Status.ValueType  # 404
+        UW_TARGET_EPOCH_ID_ERROR: Response._Status.ValueType  # 10
+        NER_TARGET_EPOCH_ID_ERROR: Response._Status.ValueType  # 11
+        NO_WEIGHTS_IN_REQUEST_ERROR: Response._Status.ValueType  # 20
+        CLIENT_ALREADY_VOTED_ERROR: Response._Status.ValueType  # 30
+        SERVER_INTERNAL_ERROR: Response._Status.ValueType  # 40
     class Status(_Status, metaclass=_StatusEnumTypeWrapper):
         pass
 
     OK: Response.Status.ValueType  # 0
     NOT_MEET_QUORUM_WAIT: Response.Status.ValueType  # 1
-    UNEXPECTED_TARGET_EPOCH_ID_ERROR: Response.Status.ValueType  # 2
-    NO_WEIGHTS_IN_REQUEST_ERROR: Response.Status.ValueType  # 3
-    CLIENT_ALREADY_VOTED_ERROR: Response.Status.ValueType  # 4
-    SERVER_INTERNAL_ERROR: Response.Status.ValueType  # 404
+    UW_TARGET_EPOCH_ID_ERROR: Response.Status.ValueType  # 10
+    NER_TARGET_EPOCH_ID_ERROR: Response.Status.ValueType  # 11
+    NO_WEIGHTS_IN_REQUEST_ERROR: Response.Status.ValueType  # 20
+    CLIENT_ALREADY_VOTED_ERROR: Response.Status.ValueType  # 30
+    SERVER_INTERNAL_ERROR: Response.Status.ValueType  # 40
 
     class WLastEntry(google.protobuf.message.Message):
         DESCRIPTOR: google.protobuf.descriptor.Descriptor

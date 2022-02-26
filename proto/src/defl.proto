@@ -12,7 +12,7 @@ message RegisterInfo {
 message ClientRequest {
   enum Method {
     FETCH_W_LAST = 0;
-    NEW_WEIGHTS = 1;
+    UPD_WEIGHTS = 1;
     NEW_EPOCH_REQUEST = 2;
     // Registration
     CLIENT_REGISTER = 7;
@@ -30,10 +30,11 @@ message Response {
   enum Status {
     OK = 0;
     NOT_MEET_QUORUM_WAIT = 1;
-    UNEXPECTED_TARGET_EPOCH_ID_ERROR = 2;
-    NO_WEIGHTS_IN_REQUEST_ERROR = 3;
-    CLIENT_ALREADY_VOTED_ERROR = 4;
-    SERVER_INTERNAL_ERROR = 404;
+    UW_TARGET_EPOCH_ID_ERROR = 10;
+    NER_TARGET_EPOCH_ID_ERROR = 11;
+    NO_WEIGHTS_IN_REQUEST_ERROR = 20;
+    CLIENT_ALREADY_VOTED_ERROR = 30;
+    SERVER_INTERNAL_ERROR = 40;
   }
   Status stat = 1;
   string request_uuid = 2;

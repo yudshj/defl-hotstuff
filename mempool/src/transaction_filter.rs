@@ -65,7 +65,7 @@ impl TransactionFilter {
                             .respond_to_client(client_name.clone(), response)
                             .await
                         {
-                            Ok(_) => info!("Responded `w_last` to client {}", client_name),
+                            Ok(_) => info!("Respond FETCH_W_LAST client={} epoch_id={}", client_name, node_info.epoch_id),
                             Err(_) => warn!("Failed to respond `w_last` to client {}", client_name),
                         }
                     }

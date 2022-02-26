@@ -131,7 +131,7 @@ class IpcCommitter(Committer):
 
     async def new_weights(self, target_epoch_id: int, weights_b: bytes) -> Response:
         client_request = ClientRequest(
-            method=ClientRequest.Method.NEW_WEIGHTS,
+            method=ClientRequest.Method.UPD_WEIGHTS,
             request_uuid=str(uuid.uuid4()),
             client_name=self.client_name,
             target_epoch_id=target_epoch_id,
