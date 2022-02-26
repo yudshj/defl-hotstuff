@@ -1,13 +1,12 @@
 import asyncio
 import logging
 import uuid
-from asyncio import Queue, new_event_loop
+from asyncio import Queue
 from typing import Dict
 
 from committer import Committer
-from proto.defl_pb2 import ClientRequest, Response, RegisterInfo
-
 from committer.utils import async_length_delimited_recv, async_length_delimited_send
+from proto.defl_pb2 import ClientRequest, Response, RegisterInfo
 
 
 class IpcCommitter(Committer):
@@ -112,7 +111,7 @@ class IpcCommitter(Committer):
         """Return if the client is successfully registered to the server"""
         await asyncio.wait((
             asyncio.create_task(self.connect_to_server()),
-            asyncio.create_task(self.start_servers())))
+            asyncio.create_task(self.start_servers())), return_when=asyncio.ALL_COMPLETED)
 
         asyncio.create_task(self.active_server.serve_forever())
         asyncio.create_task(self.passive_server.serve_forever())
