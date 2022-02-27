@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
 use bytes::Bytes;
-use ed25519_dalek::{Digest, Sha512};
 use log::{info, warn};
 use prost::Message;
 use tokio::sync::mpsc::{channel, Receiver};
@@ -10,7 +9,6 @@ use tokio::sync::mpsc::{channel, Receiver};
 use consensus::{Block, Consensus};
 use crypto::SignatureService;
 use mempool::{Mempool, MempoolMessage};
-use network::SimpleSender;
 use proto::defl::*;
 // Sync the mempool with the consensus and nodes.
 use proto::defl::client_request::Method;
@@ -78,10 +76,7 @@ impl Node {
             store.clone(),
             rx_consensus_to_mempool,
             tx_mempool_to_consensus,
-            DeflSender {
-                sender: SimpleSender::new(),
-                contacts: defl_sender.contacts.clone(),
-            },
+            defl_sender.clone(),
             last_node_info.clone(),
         );
 

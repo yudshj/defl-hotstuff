@@ -35,7 +35,7 @@ tmux new -d -s node-1 "./node -vv run --keys .node-1.json --committee .committee
 tmux new -d -s node-2 "./node -vv run --keys .node-2.json --committee .committee.json --store .db-2 --parameters .parameters.json 2> logs/node-2.log"
 tmux new -d -s node-3 "./node -vv run --keys .node-3.json --committee .committee.json --store .db-3 --parameters .parameters.json 2> logs/node-3.log"
 
-termdown ${SLEEP_SEC} --no-figlet
+termdown ${SLEEP_SEC}s
 # echo "Sleeping for $SLEEP_SEC seconds"
 
 if [ $? -ne 0 ]; then

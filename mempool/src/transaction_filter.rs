@@ -77,6 +77,7 @@ impl TransactionFilter {
                     },
                     Some(Method::ClientRegister) => {
                         if let Some(register_info) = register_info {
+                            info!("Registering client {}", &client_name);
                             defl_sender
                                 .client_register(client_name, register_info.into())
                                 .await;
