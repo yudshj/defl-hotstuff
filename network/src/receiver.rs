@@ -1,14 +1,16 @@
-// Copyright(C) Facebook, Inc. and its affiliates.
-use crate::error::NetworkError;
+use std::error::Error;
+use std::net::SocketAddr;
+
 use async_trait::async_trait;
 use bytes::Bytes;
 use futures::stream::SplitSink;
 use futures::stream::StreamExt as _;
 use log::{debug, info, warn};
-use std::error::Error;
-use std::net::SocketAddr;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
+
+// Copyright(C) Facebook, Inc. and its affiliates.
+use crate::error::NetworkError;
 
 #[cfg(test)]
 #[path = "tests/receiver_tests.rs"]
@@ -67,7 +69,10 @@ impl<Handler: MessageHandler> Receiver<Handler> {
     /// using the provided handler.
     async fn spawn_runner(socket: TcpStream, peer: SocketAddr, handler: Handler) {
         tokio::spawn(async move {
-            let transport = Framed::new(socket, LengthDelimitedCodec::new());
+            let transport = Framed::new(socket, LengthDelimitedCodec::builder()
+                .length_field_length(8)
+                .max_frame_length(8 * 1024 * 1024 * 1024) /* 8 GiB */
+                .new_codec());
             let (mut writer, mut reader) = transport.split();
             while let Some(frame) = reader.next().await {
                 match frame.map_err(|e| NetworkError::FailedToReceiveMessage(peer, e)) {

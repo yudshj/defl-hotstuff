@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
 use bytes::Bytes;
+use ed25519_dalek::{Digest, Sha512};
 use log::{info, warn};
 use prost::Message;
 use tokio::sync::mpsc::{channel, Receiver};
@@ -14,7 +15,7 @@ use proto::defl::*;
 // Sync the mempool with the consensus and nodes.
 use proto::defl::client_request::Method;
 use proto::defl::response::Status;
-use proto::defl_sender::DeflSender;
+use proto::defl_sender::{DeflSender, RespondError};
 use proto::NodeInfo;
 use store::Store;
 
@@ -126,34 +127,36 @@ impl Node {
                 if let Ok(MempoolMessage::Batch(batch)) =
                     bincode::deserialize(serialized_batch.as_slice())
                 {
+                    info!("DONG: Analyzing BATCH_LEN={} batch...", batch.len());
                     for client_tx in batch {
-                        // info!("DONG: Analyze client tx: [{}].", base64::encode(&client_tx));
-                        let client_request = ClientRequest::decode(Bytes::from(client_tx)).unwrap();
+                        info!("analyze_block client_tx digest: {:?}", Sha512::digest(&client_tx));
                         let ClientRequest {
-                            method: _,
+                            method,
                             request_uuid,
                             client_name,
-                            target_epoch_id: _,
+                            target_epoch_id,
                             weights,
                             register_info: _,
-                        } = client_request;
-                        let stat = match Method::from_i32(client_request.method) {
+                        } = ClientRequest::decode(Bytes::from(client_tx)).unwrap();
+                        let stat = match Method::from_i32(method) {
                             Some(Method::UpdWeights) => {
-                                info!("DONG: UPD_WEIGHTS received.");
-                                if let Some(target_epoch_id) = client_request.target_epoch_id {
+                                info!("DONG: Batch tx: UPD_WEIGHTS");
+                                if let Some(target_epoch_id) = target_epoch_id {
                                     if target_epoch_id == self.cur_node_info.epoch_id {
                                         if let Some(weights) = weights {
-                                            self.cur_node_info
+                                            if let Some(_) = self.cur_node_info
                                                 .client_weights
-                                                .insert(client_name.clone(), weights);
-                                            info!("DONG: UPD_WEIGHTS updated.");
+                                                .insert(client_name.clone(), weights) {
+                                                warn!("DONG: UPD_WEIGHTS: client_name already exists, overwriting...");
+                                            }
+                                            info!("DONG: UPD_WEIGHTS success.");
                                             Status::Ok.into()
                                         } else {
                                             warn!("DONG: No `weights` field in request.");
                                             Status::NoWeightsInRequestError.into()
                                         }
                                     } else {
-                                        warn!("DONG: UNEXPECTED_EPOCH_ID {}", client_name);
+                                        warn!("DONG: UNEXPECTED_EPOCH_ID [{}] epoch_id={}", client_name, target_epoch_id);
                                         Status::UwTargetEpochIdError.into()
                                     }
                                 } else {
@@ -162,8 +165,8 @@ impl Node {
                                 }
                             }
                             Some(Method::NewEpochRequest) => {
-                                info!("DONG: NEW_EPOCH_REQUEST received.");
-                                if let Some(target_epoch_id) = client_request.target_epoch_id {
+                                info!("DONG: Batch tx: NEW_EPOCH_REQUEST.");
+                                if let Some(target_epoch_id) = target_epoch_id {
                                     if target_epoch_id == self.cur_node_info.epoch_id {
                                         if self.voted_clients.insert(client_name.clone()) {
                                             info!("DONG: Client [{}] voted.", client_name);
@@ -201,7 +204,7 @@ impl Node {
                                             Status::ClientAlreadyVotedError.into()
                                         }
                                     } else {
-                                        warn!("DONG: UNEXPECTED_EPOCH_ID {}", client_name);
+                                        warn!("DONG: UNEXPECTED_EPOCH_ID [{}] epoch_id={}", client_name, target_epoch_id);
                                         Status::NerTargetEpochIdError.into()
                                     }
                                 } else {
@@ -217,19 +220,24 @@ impl Node {
                         let response = Response {
                             stat,
                             request_uuid,
+                            response_uuid: uuid::Uuid::new_v4().to_string(),
                             w_last: HashMap::new(),
                             r_last_epoch_id: None,
                         };
+                        let request_uuid = response.request_uuid.clone();
                         match self
                             .defl_sender
                             .respond_to_client(client_name.clone(), response)
                             .await
                         {
-                            Ok(()) => {
-                                info!("DONG: Respond to [{}].", client_name)
+                            Ok(len) => {
+                                info!("DONG: Responded [{}]\nbytes={}\nrequest_uuid={}", client_name, len, request_uuid);
                             }
-                            Err(_) => {
-                                warn!("DONG: Failed to respond [{}].", client_name)
+                            Err(RespondError::NotRegisteredError { client_name: _ }) => {
+                                info!("DONG: Client [{}] is not registered.", client_name);
+                            }
+                            Err(RespondError::NetworkError { client_name: _ }) => {
+                                warn!("DONG: Network error occurred while responding to [{}].", client_name);
                             }
                         }
                     }

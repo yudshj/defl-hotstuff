@@ -18,7 +18,7 @@ INIT_MODEL_PATH = 'defl/data/init_model.h5'
 
 
 async def main():
-    formatter = logging.Formatter(r"[%(asctime)s - %(funcName)s - %(levelname)s]: %(message)s")
+    formatter = logging.Formatter(r"[%(asctime)s - %(levelname)s - %(funcName)s]: %(message)s")
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
 
@@ -28,20 +28,18 @@ async def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('host', help='host', type=str)
-    parser.add_argument('--train', default='500',
-                        help='train time in milliseconds', type=int)
     parser.add_argument('--gst', default='2000',
                         help='train time in milliseconds', type=int)
     parser.add_argument('--fetch', default='500',
                         help='train time in milliseconds', type=int)
     parser.add_argument('--timeout', default='1000',
-                        help='timeout of sending (miliseconds)', type=int)
-
+                        help='timeout of sending milliseconds', type=int)
     args = parser.parse_args()
-    h, p = args.host.split(':')
 
+    # learning stuff
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
-
+    x_train = x_train[:1000]
+    y_train = y_train[:1000]
     x_train = x_train.astype('float32')
     x_test = x_test.astype('float32')
     x_train /= 255
@@ -51,9 +49,7 @@ async def main():
     train_data = (x_train, y_train)
     test_data = (x_test, y_test)
     model = tf.keras.models.load_model(INIT_MODEL_PATH)
-    epoch_id = -1
-    client_name = str(uuid.uuid4())
-    committer = IpcCommitter(client_name, h, int(p), args.timeout / 1000.0)
+    model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy'])
     trainer = Trainer(
         model,
         train_data,
@@ -62,29 +58,37 @@ async def main():
         KrumAggregator(),
         NUM_BYZANTINE,
     )
+
+    # committer stuff
+    server_host, server_port = args.host.split(':')
+    client_name = str(uuid.uuid4())
+    committer = IpcCommitter(client_name, server_host, int(server_port), args.timeout / 1000.0)
     await committer.committer_bootstrap()
+
+    # defl stuff
     last_weights = None
+    epoch_id = -1
     for i in range(100):
         logging.info("[LOOP %d] Current epoch id is %d. Fetching...", i, epoch_id)
-        resp = await committer.fetch_w_last()
-        logging.debug(f'Collected: {Response.Status.Name(resp.stat)} with {resp.ByteSize()} bytes')
-        if epoch_id <= resp.r_last_epoch_id:
-            if client_name in resp.w_last:
-                assert resp.w_last[client_name] == last_weights
+        fetch_resp = await committer.fetch_w_last()
+        logging.debug(f'Collected: {Response.Status.Name(fetch_resp.stat)} with {fetch_resp.ByteSize()} bytes')
+        if epoch_id <= fetch_resp.r_last_epoch_id:
+            if client_name in fetch_resp.w_last:
+                assert fetch_resp.w_last[client_name] == last_weights
 
+            logging.debug("Creating GST event...")
             gst_event = asyncio.create_task(asyncio.sleep(args.gst / 1000.0))
 
-            await trainer.aggregate_weights(resp.w_last)
+            await trainer.aggregate_weights(fetch_resp.w_last)
             # local_train
             logging.info("Local training...")
-            await trainer.local_train()
-            cur_weights = await trainer.get_serialized_weights()
+            cur_weights = await trainer.local_train()
 
             logging.info("Updating weights...")
-            resp = await committer.new_weights(resp.r_last_epoch_id + 1, cur_weights)
-            logging.debug(f'Collected: {Response.Status.Name(resp.stat)} with {resp.ByteSize()} bytes')
+            upd_weight_resp = await committer.new_weights(fetch_resp.r_last_epoch_id + 1, cur_weights)
+            logging.debug(f'Collected: {Response.Status.Name(upd_weight_resp.stat)} with {upd_weight_resp.ByteSize()} bytes')
             # assert r.stat == Response.Status.OK
-            epoch_id = resp.r_last_epoch_id + 1
+            epoch_id = fetch_resp.r_last_epoch_id + 1
             last_weights = cur_weights
 
             # wait_for_GST
@@ -93,8 +97,8 @@ async def main():
             await gst_event
 
             logging.info("Voting new epoch...")
-            resp = await committer.new_epoch_request(epoch_id)
-            logging.debug(f'Collected: {Response.Status.Name(resp.stat)} with {resp.ByteSize()} bytes')
+            new_epoch_resp = await committer.new_epoch_request(epoch_id)
+            logging.debug(f'Collected: {Response.Status.Name(new_epoch_resp.stat)} with {new_epoch_resp.ByteSize()} bytes')
             # assert r.stat == Response.Status.OK or r.stat == Response.Status.NOT_MEET_QUORUM_WAIT
         else:
             # fetch burst

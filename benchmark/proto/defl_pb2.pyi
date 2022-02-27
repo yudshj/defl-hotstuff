@@ -127,10 +127,12 @@ class Response(google.protobuf.message.Message):
 
     STAT_FIELD_NUMBER: builtins.int
     REQUEST_UUID_FIELD_NUMBER: builtins.int
+    RESPONSE_UUID_FIELD_NUMBER: builtins.int
     R_LAST_EPOCH_ID_FIELD_NUMBER: builtins.int
     W_LAST_FIELD_NUMBER: builtins.int
     stat: global___Response.Status.ValueType
     request_uuid: typing.Text
+    response_uuid: typing.Text
     r_last_epoch_id: builtins.int
     @property
     def w_last(self) -> google.protobuf.internal.containers.ScalarMap[typing.Text, builtins.bytes]: ...
@@ -138,10 +140,11 @@ class Response(google.protobuf.message.Message):
         *,
         stat: global___Response.Status.ValueType = ...,
         request_uuid: typing.Text = ...,
+        response_uuid: typing.Text = ...,
         r_last_epoch_id: typing.Optional[builtins.int] = ...,
         w_last: typing.Optional[typing.Mapping[typing.Text, builtins.bytes]] = ...,
         ) -> None: ...
     def HasField(self, field_name: typing_extensions.Literal["_r_last_epoch_id",b"_r_last_epoch_id","r_last_epoch_id",b"r_last_epoch_id"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["_r_last_epoch_id",b"_r_last_epoch_id","r_last_epoch_id",b"r_last_epoch_id","request_uuid",b"request_uuid","stat",b"stat","w_last",b"w_last"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["_r_last_epoch_id",b"_r_last_epoch_id","r_last_epoch_id",b"r_last_epoch_id","request_uuid",b"request_uuid","response_uuid",b"response_uuid","stat",b"stat","w_last",b"w_last"]) -> None: ...
     def WhichOneof(self, oneof_group: typing_extensions.Literal["_r_last_epoch_id",b"_r_last_epoch_id"]) -> typing.Optional[typing_extensions.Literal["r_last_epoch_id"]]: ...
 global___Response = Response

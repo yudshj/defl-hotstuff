@@ -1,14 +1,17 @@
+use std::collections::HashSet;
+
+use bytes::Bytes;
+use futures::stream::futures_unordered::FuturesUnordered;
+use futures::stream::StreamExt as _;
+use log::{debug, info, warn};
+use tokio::sync::mpsc::{Receiver, Sender};
+
+use crypto::{Digest, PublicKey, SignatureService};
+use network::{CancelHandler, ReliableSender};
+
 use crate::config::{Committee, Stake};
 use crate::consensus::{ConsensusMessage, Round};
 use crate::messages::{Block, QC, TC};
-use bytes::Bytes;
-use crypto::{Digest, PublicKey, SignatureService};
-use futures::stream::futures_unordered::FuturesUnordered;
-use futures::stream::StreamExt as _;
-use log::{debug, info};
-use network::{CancelHandler, ReliableSender};
-use std::collections::HashSet;
-use tokio::sync::mpsc::{Receiver, Sender};
 
 #[derive(Debug)]
 pub enum ProposerMessage {
@@ -78,6 +81,9 @@ impl Proposer {
                 // NOTE: This log entry is used to compute performance.
                 info!("Created {} -> {:?}", block, x);
             }
+        } else {
+            // TODO: check TC here?
+            warn!("Created empty block {}", block);
         }
         debug!("Created {:?}", block);
 

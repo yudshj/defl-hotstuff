@@ -5,7 +5,7 @@ from asyncio import Queue
 from typing import Dict
 
 # from defl.committer import Committer
-from defl.committer.utils import async_length_delimited_recv, async_length_delimited_send
+from defl.committer.utils import LengthDelimitedCodec
 from proto.defl_pb2 import ClientRequest, Response, RegisterInfo
 
 
@@ -29,6 +29,7 @@ class IpcCommitter:
         self.active_server = None
         self.replica_tx = None
         self.replica_rx = None
+        self.codec = LengthDelimitedCodec(8)
 
         # async sync stuff
         self.__response_map: Dict[str, Queue] = {}
@@ -51,42 +52,37 @@ class IpcCommitter:
                 await asyncio.sleep(0.1)
         logging.info('Connected to server')
 
-    async def handle_active(self, reader, _writer):
-        while True:
-            logging.debug('Handling active connection')
-            resp = await async_length_delimited_recv(reader)
-            logging.debug(f'Received {len(resp)} bytes')
-            response = Response()
-            response.ParseFromString(resp)
-            logging.debug(f'{response.request_uuid} Trying to acquire lock')
-            async with self.__response_map_lock:
-                logging.debug(f'{response.request_uuid} Acquired lock')
-                queue = self.__response_map[response.request_uuid]
-                logging.debug(f'{response.request_uuid} Got queue')
-            logging.debug(f'{response.request_uuid} Putting response in queue')
-            await queue.put(response)
-            logging.debug(f'{response.request_uuid} Put response in queue')
-
     async def transmit(self, client_request: ClientRequest) -> bool:
         msg = client_request.SerializeToString()
-        logging.debug(f'Transmitting with {len(msg)} bytes')
-        await async_length_delimited_send(self.replica_tx, msg)
-        resp = await async_length_delimited_recv(self.replica_rx)
+        logging.debug(f'Transmitting [{client_request.request_uuid}] {ClientRequest.Method.Name(client_request.method)} with {len(msg)} bytes')
+        await self.codec.async_length_delimited_send(self.replica_tx, msg)
+        resp = await self.codec.async_length_delimited_recv(self.replica_rx)
         resp = resp.decode()
         logging.debug(f'Immediate response: {resp}')
         return resp == 'Ack'
 
-    async def collect(self, request_uuid: str) -> Response:
-        logging.debug(f'{request_uuid} Collecting response')
+    async def handle_active(self, reader, writer):
+        while True:
+            resp = await self.codec.async_length_delimited_recv(reader)
+            logging.debug(f'Received {len(resp)} bytes')
+            response = Response()
+            response.ParseFromString(resp)
+            logging.debug(f'HANDLE [{response.request_uuid}] {Response.Status.Name(response.stat)}\n\tresponse_uuid={response.response_uuid}')
+            async with self.__response_map_lock:
+                if response.request_uuid in self.__response_map:
+                    queue = self.__response_map[response.request_uuid]
+                    del self.__response_map[response.request_uuid]
+                else:
+                    logging.warn(f'Received response for unknown request {response.request_uuid}')
+            await queue.put(response)
+
+    async def collect(self, client_request: ClientRequest) -> Response:
+        request_uuid = client_request.request_uuid
         response_queue = Queue(1)
-        logging.debug(f'{request_uuid} Trying to acquire lock')
+        logging.debug(f'COLLECT [{request_uuid}] {ClientRequest.Method.Name(client_request.method)}')
         async with self.__response_map_lock:
-            logging.debug(f'{request_uuid} Acquired lock')
             self.__response_map[request_uuid] = response_queue
-            logging.debug(f'{request_uuid} Put to response map')
-        logging.debug(f'{request_uuid} Waiting for response')
         response: Response = await response_queue.get()
-        logging.debug(f'{request_uuid} Got response')
         assert type(response) == Response
         return response
 
@@ -126,7 +122,7 @@ class IpcCommitter:
             register_info=None,
         )
         assert await self.transmit(client_request)
-        return await self.collect(client_request.request_uuid)
+        return await self.collect(client_request)
 
     async def new_weights(self, target_epoch_id: int, weights_b: bytes) -> Response:
         client_request = ClientRequest(
@@ -138,7 +134,7 @@ class IpcCommitter:
             register_info=None,
         )
         assert await self.transmit(client_request)
-        return await self.collect(client_request.request_uuid)
+        return await self.collect(client_request)
 
     async def new_epoch_request(self, target_epoch_id: int) -> Response:
         client_request = ClientRequest(
@@ -150,4 +146,4 @@ class IpcCommitter:
             register_info=None,
         )
         assert await self.transmit(client_request)
-        return await self.collect(client_request.request_uuid)
+        return await self.collect(client_request)

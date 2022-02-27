@@ -1,6 +1,12 @@
+import h5py
+import io
 import logging
-import pickle
+import zstd
+
+import tensorflow as tf
+
 from typing import Dict
+from tensorflow.python.keras.saving import hdf5_format
 
 
 class Trainer:
@@ -18,19 +24,30 @@ class Trainer:
             self.model.set_weights(self.init_weights)
             logging.warning("No weights received, using initial weights!")
         else:
-            for client_name, client_weights in weights:
-                self.agg.add_client_delta(client_weights)
+            for client_name, client_weights_h5_zstd in weights.items():
+                client_weights_h5 = zstd.decompress(client_weights_h5_zstd)
+                with io.BytesIO(client_weights_h5) as bytes_file:
+                    with h5py.File(bytes_file, 'r') as f:
+                        hdf5_format.load_weights_from_hdf5_group(f, self.model.layers)
+                self.agg.add_client_delta(self.model.get_weights())
             w_agg = self.agg.aggregate(self.num_byzantine)
             self.model.set_weights(w_agg)
             self.agg.clear_aggregator()
+            # test accuracy
+            score = self.model.evaluate(self.test_data[0], self.test_data[1], verbose=0)
+            logging.info('[AGGREGATED] Test loss: {0[0]}, test accuracy: {0[1]}'.format(score))
 
-    async def local_train(self):
-        self.model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy'])
+    async def local_train(self) -> bytes:
+        '''Return the weights of the model after local training'''
+        # self.model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy'])
         self.model.fit(self.train_data[0], self.train_data[1],
                        epochs=self.local_train_epochs,
                        verbose=1,
                        # validation_data=self.test_data
                        )
 
-    async def get_serialized_weights(self) -> bytes:
-        return pickle.dumps(self.model.get_weights())
+        with io.BytesIO() as bytes_file:
+            with h5py.File(bytes_file, 'w') as f:
+                hdf5_format.save_weights_to_hdf5_group(f, self.model.layers)
+            payload = bytes_file.getvalue()
+        return zstd.compress(payload, 9)

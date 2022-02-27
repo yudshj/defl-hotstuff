@@ -38,6 +38,7 @@ message Response {
   }
   Status stat = 1;
   string request_uuid = 2;
-  optional int64 r_last_epoch_id = 3;
-  map<string, bytes> w_last = 4;
+  string response_uuid = 3;
+  optional int64 r_last_epoch_id = 4;
+  map<string, bytes> w_last = 5;
 }

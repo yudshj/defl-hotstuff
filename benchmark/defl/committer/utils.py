@@ -1,33 +1,31 @@
-import socket
+import logging
+from socket import socket
 from asyncio import StreamReader, StreamWriter
 
 
-def length_delimited_send(sock: socket.socket, data: bytes):
-    length = len(data)
-    sock.sendall(length.to_bytes(4, 'big'))
-    sock.sendall(data)
+class LengthDelimitedCodec:
+    def __init__(self, length_field_length: int):
+        self.length_field_length = length_field_length
 
+    def length_delimited_send(self, sock: socket, data: bytes):
+        length = len(data)
+        sock.send(length.to_bytes(self.length_field_length, byteorder='big', signed=False) + data)
 
-def length_delimited_recv(sock: socket.socket) -> bytes:
-    length = sock.recv(4)
-    length = int.from_bytes(length, 'big')
-    payload = sock.recv(length)
-    return payload
+    def length_delimited_recv(self, sock: socket) -> bytes:
+        length = sock.recv(self.length_field_length)
+        length = int.from_bytes(length, byteorder='big', signed=False)
+        payload = sock.recv(length)
+        return payload
 
+    async def async_length_delimited_recv(self, reader: StreamReader):
+        length = await reader.readexactly(self.length_field_length)
+        length = int.from_bytes(length, byteorder='big', signed=False)
+        logging.debug(f'Ought to receive {length} bytes')
+        payload = await reader.readexactly(length)
+        return payload
 
-def recv_1024(sock: socket.socket) -> bytes:
-    return sock.recv(1024)
-
-
-async def async_length_delimited_recv(reader: StreamReader):
-    length = await reader.read(4)
-    length = int.from_bytes(length, 'big')
-    payload = await reader.read(length)
-    return payload
-
-
-async def async_length_delimited_send(writer: StreamWriter, data: bytes):
-    length = len(data)
-    writer.write(length.to_bytes(4, 'big'))
-    writer.write(data)
-    await writer.drain()
+    async def async_length_delimited_send(self, writer: StreamWriter, data: bytes):
+        length = len(data)
+        logging.debug(f'Ought to send {length} bytes')
+        writer.write(length.to_bytes(self.length_field_length, byteorder='big', signed=False) + data)
+        await writer.drain()

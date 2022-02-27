@@ -21,6 +21,8 @@ rand = "0.7.3"
 thiserror = "1.0.21"
 anyhow = "1.0.38"
 prost = "0.9.0"
+uuid = { version = "0.8.2", features = ["v4"] }
+ed25519-dalek = "1.0.1"
 
 crypto = { path = "../crypto" }
 store = { path = "../store" }

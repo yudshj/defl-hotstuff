@@ -1,10 +1,12 @@
-use crate::config::Committee;
 use bytes::Bytes;
-use crypto::{Digest, PublicKey};
 use log::{error, warn};
+use tokio::sync::mpsc::Receiver;
+
+use crypto::{Digest, PublicKey};
 use network::SimpleSender;
 use store::Store;
-use tokio::sync::mpsc::Receiver;
+
+use crate::config::Committee;
 
 #[cfg(test)]
 #[path = "tests/helper_tests.rs"]
@@ -56,7 +58,7 @@ impl Helper {
             // Reply to the request (the best we can).
             for digest in digests {
                 match self.store.read(digest.to_vec()).await {
-                    Ok(Some(data)) => self.network.send(address, Bytes::from(data)).await,
+                    Ok(Some(data)) => { self.network.send(address, Bytes::from(data)).await; },
                     Ok(None) => (),
                     Err(e) => error!("{}", e),
                 }

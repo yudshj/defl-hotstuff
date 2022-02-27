@@ -1,5 +1,8 @@
-// Copyright(C) Facebook, Inc. and its affiliates.
-use crate::error::NetworkError;
+use std::cmp::min;
+use std::collections::{HashMap, VecDeque};
+use std::fmt::Debug;
+use std::net::SocketAddr;
+
 use bytes::Bytes;
 use futures::sink::SinkExt as _;
 use futures::stream::StreamExt as _;
@@ -7,15 +10,14 @@ use log::{info, warn};
 use rand::prelude::SliceRandom as _;
 use rand::rngs::SmallRng;
 use rand::SeedableRng as _;
-use std::cmp::min;
-use std::collections::{HashMap, VecDeque};
-use std::fmt::Debug;
-use std::net::SocketAddr;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::sync::oneshot;
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
+
+// Copyright(C) Facebook, Inc. and its affiliates.
+use crate::error::NetworkError;
 
 #[cfg(test)]
 #[path = "tests/reliable_sender_tests.rs"]
@@ -187,7 +189,10 @@ impl Connection {
         // which we are still waiting to receive an ACK.
         let mut pending_replies = VecDeque::new();
 
-        let (mut writer, mut reader) = Framed::new(stream, LengthDelimitedCodec::new()).split();
+        let (mut writer, mut reader) = Framed::new(stream, LengthDelimitedCodec::builder()
+            .length_field_length(8)
+            .max_frame_length(8 * 1024 * 1024 * 1024) /* 8 GiB */
+            .new_codec()).split();
         let error = 'connection: loop {
             // Try to send all messages of the buffer.
             while let Some((data, handler)) = self.buffer.pop_front() {

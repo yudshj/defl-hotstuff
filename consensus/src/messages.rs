@@ -74,9 +74,12 @@ impl Block {
         // Check the TC embedded in the block (if any).
         if let Some(ref tc) = self.tc {
             tc.verify(committee)?;
+        } else {
+            if self.payload.is_empty() {
+                return Err(ConsensusError::InvalidPayload);
+            }
         }
 
-        // TODO [Obsido]: verify if a block valid
         Ok(())
     }
 }

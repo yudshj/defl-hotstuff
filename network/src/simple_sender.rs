@@ -1,5 +1,6 @@
-// Copyright(C) Facebook, Inc. and its affiliates.
-use crate::error::NetworkError;
+use std::collections::HashMap;
+use std::net::SocketAddr;
+
 use bytes::Bytes;
 use futures::sink::SinkExt as _;
 use futures::stream::StreamExt as _;
@@ -7,11 +8,12 @@ use log::{info, warn};
 use rand::prelude::SliceRandom as _;
 use rand::rngs::SmallRng;
 use rand::SeedableRng as _;
-use std::collections::HashMap;
-use std::net::SocketAddr;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
+
+// Copyright(C) Facebook, Inc. and its affiliates.
+use crate::error::NetworkError;
 
 #[cfg(test)]
 #[path = "tests/simple_sender_tests.rs"]
@@ -49,11 +51,11 @@ impl SimpleSender {
 
     /// Try (best-effort) to send a message to a specific address.
     /// This is useful to answer sync requests.
-    pub async fn send(&mut self, address: SocketAddr, data: Bytes) {
+    pub async fn send(&mut self, address: SocketAddr, data: Bytes) -> bool {
         // Try to re-use an existing connection if possible.
         if let Some(tx) = self.connections.get(&address) {
             if tx.send(data.clone()).await.is_ok() {
-                return;
+                return true;
             }
         }
 
@@ -61,6 +63,9 @@ impl SimpleSender {
         let tx = Self::spawn_connection(address);
         if tx.send(data).await.is_ok() {
             self.connections.insert(address, tx);
+            true
+        } else {
+            false
         }
     }
 
@@ -104,7 +109,13 @@ impl Connection {
     async fn run(&mut self) {
         // Try to connect to the peer.
         let (mut writer, mut reader) = match TcpStream::connect(self.address).await {
-            Ok(stream) => Framed::new(stream, LengthDelimitedCodec::new()).split(),
+            Ok(stream) => {
+                let codec = LengthDelimitedCodec::builder()
+                    .length_field_length(8)
+                    .max_frame_length(8 * 1024 * 1024 * 1024) /* 8 GiB */
+                    .new_codec();
+                Framed::new(stream, codec).split()
+            },
             Err(e) => {
                 warn!(
                     "{}",

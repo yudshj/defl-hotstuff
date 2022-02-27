@@ -52,33 +52,36 @@ impl TransactionFilter {
                     weights: _,
                     register_info,
                 } = client_request;
+                info!("filtering transactions {}", request_uuid.clone());
                 match Method::from_i32(method) {
                     Some(Method::FetchWLast) => {
                         let node_info = self.node_info.lock().unwrap().clone();
                         let response = Response {
                             stat: Status::Ok.into(),
                             request_uuid,
+                            response_uuid: uuid::Uuid::new_v4().to_string(),
                             w_last: node_info.client_weights,
                             r_last_epoch_id: Option::from(node_info.epoch_id),
                         };
+                        let request_uuid = response.request_uuid.clone();
                         match defl_sender
                             .respond_to_client(client_name.clone(), response)
                             .await
                         {
-                            Ok(_) => info!(
-                                "Respond FETCH_W_LAST [{}] epoch_id={}",
-                                client_name, node_info.epoch_id
+                            Ok(len) => info!(
+                                "Responded FETCH_W_LAST [{}]\nepoch_id={}\nbytes={}\nrequest_uuid={}",
+                                client_name, node_info.epoch_id, len, request_uuid
                             ),
-                            Err(_) => warn!("Failed to respond FETCH_W_LAST [{}]", client_name),
+                            Err(_) => warn!("Failed to respond FETCH_W_LAST [{}].", client_name),
                         }
-                    }
+                    },
                     Some(Method::ClientRegister) => {
                         if let Some(register_info) = register_info {
                             defl_sender
                                 .client_register(client_name, register_info.into())
                                 .await;
                         }
-                    }
+                    },
                     _ => {
                         self.tx_batch_maker.send(transaction).await.unwrap();
                     }
