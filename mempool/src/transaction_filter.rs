@@ -9,12 +9,12 @@ use proto::defl::{ClientRequest, Response};
 use proto::defl::client_request::Method;
 use proto::defl::response::Status;
 use proto::defl_sender::DeflSender;
-use proto::NodeInfo;
+use proto::DeflDatabank;
 
 use crate::batch_maker::Transaction;
 
 pub struct TransactionFilter {
-    node_info: Arc<Mutex<NodeInfo>>,
+    defl_databank: Arc<Mutex<DeflDatabank>>,
     rx_filter: Receiver<Transaction>,
     tx_batch_maker: Sender<Transaction>,
 }
@@ -22,13 +22,13 @@ pub struct TransactionFilter {
 impl TransactionFilter {
     pub fn spawn(
         defl_sender: DeflSender,
-        node_info: Arc<Mutex<NodeInfo>>,
+        defl_databank: Arc<Mutex<DeflDatabank>>,
         rx_filter: Receiver<Transaction>,
         tx_batch_maker: Sender<Transaction>,
     ) {
         tokio::spawn(async move {
             Self {
-                node_info,
+                defl_databank,
                 rx_filter,
                 tx_batch_maker,
             }
@@ -55,13 +55,13 @@ impl TransactionFilter {
                 info!("filtering transactions {}", request_uuid.clone());
                 match Method::from_i32(method) {
                     Some(Method::FetchWLast) => {
-                        let node_info = self.node_info.lock().unwrap().clone();
+                        let defl_databank = self.defl_databank.lock().unwrap().clone();
                         let response = Response {
                             stat: Status::Ok.into(),
                             request_uuid,
                             response_uuid: uuid::Uuid::new_v4().to_string(),
-                            w_last: node_info.client_weights,
-                            r_last_epoch_id: Option::from(node_info.epoch_id),
+                            w_last: defl_databank.client_weights,
+                            r_last_epoch_id: Option::from(defl_databank.epoch_id),
                         };
                         let request_uuid = response.request_uuid.clone();
                         match defl_sender
@@ -70,7 +70,7 @@ impl TransactionFilter {
                         {
                             Ok(len) => info!(
                                 "Responded FETCH_W_LAST [{}]\tepoch_id={}\tbytes={}\trequest_uuid={}",
-                                client_name, node_info.epoch_id, len, request_uuid
+                                client_name, defl_databank.epoch_id, len, request_uuid
                             ),
                             Err(_) => warn!("Failed to respond FETCH_W_LAST [{}].", client_name),
                         }

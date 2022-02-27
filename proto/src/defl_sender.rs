@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, PoisonError};
 use std::sync::RwLock;
 
 use prost::Message;
@@ -9,12 +9,13 @@ use thiserror::Error;
 use network::SimpleSender;
 
 use crate::defl::Response;
+use crate::defl_sender::RespondError::ContactsLockPoisonError;
 use crate::SimpleRegisterInfo;
 
 #[derive(Error, Debug)]
 pub enum RespondError {
     #[error("Client {client_name} not registered")]
-    NotRegisteredError {
+    RegistrationError {
         client_name: String,
     },
 
@@ -22,6 +23,15 @@ pub enum RespondError {
     NetworkError {
         client_name: String,
     },
+
+    #[error("R/w contacts error.")]
+    ContactsLockPoisonError,
+}
+
+impl<T> From<PoisonError<T>> for RespondError {
+    fn from(_: PoisonError<T>) -> Self {
+        ContactsLockPoisonError
+    }
 }
 
 pub struct DeflSender {
@@ -52,14 +62,7 @@ impl DeflSender {
         client_name: String,
         response: Response,
     ) -> Result<usize, RespondError> {
-        let host;
-        let port;
-        if let Some(register_info) = self.contacts.read().unwrap().get(&client_name) {
-            host = register_info.host.clone();
-            port = register_info.port.clone();
-        } else {
-            return Err(RespondError::NotRegisteredError { client_name });
-        }
+        let SimpleRegisterInfo { host, port, pasv_host: _, pasv_port: _ } = self.contacts.read()?.get(&client_name).ok_or(RespondError::RegistrationError { client_name: client_name.clone() })?.clone();
         let data: Vec<u8> = response.encode_to_vec();
         let length = data.len();
         let address = SocketAddr::new(host.parse().unwrap(), port);

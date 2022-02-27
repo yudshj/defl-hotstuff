@@ -28,14 +28,14 @@ impl Into<SimpleRegisterInfo> for defl::RegisterInfo {
 pub type ClientWeightsType = HashMap<String, Vec<u8>>;
 
 #[derive(Debug, Clone)]
-pub struct NodeInfo {
+pub struct DeflDatabank {
     pub client_weights: ClientWeightsType,
     pub epoch_id: i64,
 }
 
-impl NodeInfo {
-    pub fn new(init_epoch_id: i64) -> NodeInfo {
-        NodeInfo {
+impl DeflDatabank {
+    pub fn new(init_epoch_id: i64) -> DeflDatabank {
+        DeflDatabank {
             client_weights: HashMap::new(),
             epoch_id: init_epoch_id,
         }

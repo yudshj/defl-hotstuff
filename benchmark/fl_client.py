@@ -7,7 +7,7 @@ import uuid
 
 import tensorflow as tf
 
-from defl.aggregator import KrumAggregator
+from defl.aggregator import KrumAggregator, MultiKrumAggregator
 from defl.committer import IpcCommitter
 from defl.trainer import Trainer
 from proto.defl_pb2 import Response
@@ -58,7 +58,7 @@ async def main():
         train_data,
         test_data,
         LOCAL_TRAIN_EPOCHS,
-        KrumAggregator(),
+        MultiKrumAggregator(2), # KrumAggregator(),
         NUM_BYZANTINE,
     )
 
@@ -75,9 +75,11 @@ async def main():
         logging.info("[LOOP %d] Current epoch id is %d. Fetching...", i, epoch_id)
         fetch_resp = await committer.fetch_w_last()
         logging.debug(f'Collected: {Response.Status.Name(fetch_resp.stat)} with {fetch_resp.ByteSize()} bytes')
+        
         if epoch_id <= fetch_resp.r_last_epoch_id:
-            if client_name in fetch_resp.w_last:
+            if last_weights is not None:
                 assert fetch_resp.w_last[client_name] == last_weights
+                logging.info("REMOTE LAST_WEIGHTS OF THE CLIENT ARE THE SAME AS LOCAL LAST_WEIGHTS")
 
             logging.debug("Creating GST event...")
             gst_event = asyncio.create_task(asyncio.sleep(args.gst / 1000.0))
@@ -103,10 +105,10 @@ async def main():
             upd_weight_resp = await committer.new_weights(fetch_resp.r_last_epoch_id + 1, cur_weights)
             logging.debug(f'Collected: {Response.Status.Name(upd_weight_resp.stat)} with {upd_weight_resp.ByteSize()} bytes')
             epoch_id = fetch_resp.r_last_epoch_id + 1
-            last_weights = cur_weights
+            if upd_weight_resp.stat == Response.Status.OK:
+                last_weights = cur_weights
 
             # wait_for_GST
-            # TODO: check validity
             logging.info("Waiting for GST...")
             await gst_event
 

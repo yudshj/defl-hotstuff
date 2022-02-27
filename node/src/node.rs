@@ -14,7 +14,7 @@ use proto::defl::*;
 use proto::defl::client_request::Method;
 use proto::defl::response::Status;
 use proto::defl_sender::{DeflSender, RespondError};
-use proto::NodeInfo;
+use proto::DeflDatabank;
 use store::Store;
 
 use crate::config::{Committee, ConfigError, Parameters, Secret};
@@ -26,8 +26,8 @@ pub const CHANNEL_CAPACITY: usize = 1_000;
 pub struct Node {
     pub commit: Receiver<Block>,
     pub block_store: Store,
-    last_node_info: Arc<Mutex<NodeInfo>>,
-    cur_node_info: NodeInfo,
+    last_defl_databank: Arc<Mutex<DeflDatabank>>,
+    cur_defl_databank: DeflDatabank,
     voted_clients: HashSet<String>,
     defl_sender: DeflSender,
     quorum: usize,
@@ -62,8 +62,8 @@ impl Node {
 
         // Make DeFL components.
         let defl_sender = DeflSender::new();
-        let cur_node_info = NodeInfo::new(0);
-        let last_node_info = Arc::new(Mutex::new(NodeInfo::new(-1)));
+        let cur_defl_databank = DeflDatabank::new(0);
+        let last_defl_databank = Arc::new(Mutex::new(DeflDatabank::new(-1)));
 
         // Run the signature service.
         let signature_service = SignatureService::new(secret_key);
@@ -77,7 +77,7 @@ impl Node {
             rx_consensus_to_mempool,
             tx_mempool_to_consensus,
             defl_sender.clone(),
-            last_node_info.clone(),
+            last_defl_databank.clone(),
         );
 
         // Run the consensus core.
@@ -96,8 +96,8 @@ impl Node {
         Ok(Self {
             commit: rx_commit,
             block_store: store,
-            last_node_info,
-            cur_node_info,
+            last_defl_databank,
+            cur_defl_databank,
             voted_clients: HashSet::new(),
             defl_sender,
             quorum,
@@ -120,13 +120,13 @@ impl Node {
                     .block_store
                     .read(digest.to_vec())
                     .await
-                    .expect("DONG: Call store read failed.")
-                    .expect("DONG: Digest not in `block_store`.");
+                    .expect("Call store read failed.")
+                    .expect("Digest not in `block_store`.");
                 // SerializedBatchMessage
                 if let Ok(MempoolMessage::Batch(batch)) =
                 bincode::deserialize(serialized_batch.as_slice())
                 {
-                    info!("DONG: Analyzing BATCH_LEN={} batch...", batch.len());
+                    info!("Analyzing BATCH_LEN={} batch...", batch.len());
                     for client_tx in batch {
                         let ClientRequest {
                             method,
@@ -138,80 +138,80 @@ impl Node {
                         } = ClientRequest::decode(Bytes::from(client_tx)).unwrap();
                         let stat = match Method::from_i32(method) {
                             Some(Method::UpdWeights) => {
-                                info!("DONG: Batch tx: UPD_WEIGHTS");
+                                info!("Batch tx: UPD_WEIGHTS");
                                 if let Some(target_epoch_id) = target_epoch_id {
-                                    if target_epoch_id == self.cur_node_info.epoch_id {
+                                    if target_epoch_id == self.cur_defl_databank.epoch_id {
                                         if let Some(weights) = weights {
-                                            if let Some(_) = self.cur_node_info
+                                            if let Some(_) = self.cur_defl_databank
                                                 .client_weights
                                                 .insert(client_name.clone(), weights) {
-                                                warn!("DONG: UPD_WEIGHTS: client_name already exists, overwriting...");
+                                                warn!("UPD_WEIGHTS: client_name already exists, overwriting...");
                                             }
-                                            info!("DONG: UPD_WEIGHTS success.");
+                                            info!("UPD_WEIGHTS success.");
                                             Status::Ok.into()
                                         } else {
-                                            warn!("DONG: No `weights` field in request.");
+                                            warn!("No `weights` field in request.");
                                             Status::NoWeightsInRequestError.into()
                                         }
                                     } else {
-                                        warn!("DONG: UNEXPECTED_EPOCH_ID [{}] epoch_id={}", client_name, target_epoch_id);
+                                        warn!("UNEXPECTED_EPOCH_ID [{}] epoch_id={}", client_name, target_epoch_id);
                                         Status::UwTargetEpochIdError.into()
                                     }
                                 } else {
-                                    warn!("DONG: No `target_epoch_id` field in request.");
+                                    warn!("No `target_epoch_id` field in request.");
                                     Status::UwTargetEpochIdError.into()
                                 }
                             }
                             Some(Method::NewEpochRequest) => {
-                                info!("DONG: Batch tx: NEW_EPOCH_REQUEST.");
+                                info!("Batch tx: NEW_EPOCH_REQUEST.");
                                 if let Some(target_epoch_id) = target_epoch_id {
-                                    if target_epoch_id == self.cur_node_info.epoch_id {
+                                    if target_epoch_id == self.cur_defl_databank.epoch_id {
                                         if self.voted_clients.insert(client_name.clone()) {
-                                            info!("DONG: Client [{}] voted.", client_name);
+                                            info!("Client [{}] voted.", client_name);
 
                                             // check meet quorum
                                             if self.voted_clients.len() < self.quorum {
                                                 info!(
-                                                    "DONG: Not enough clients voted: {} / {}.",
+                                                    "Not enough clients voted: {} / {}.",
                                                     self.voted_clients.len(),
                                                     self.quorum
                                                 );
                                                 Status::NotMeetQuorumWait.into()
                                             } else {
-                                                info!("DONG: Enough clients voted. Total weights: {}.", self.cur_node_info.client_weights.len());
-                                                self.cur_node_info.client_weights.iter().for_each(
+                                                info!("Enough clients voted. Total weights: {}.", self.cur_defl_databank.client_weights.len());
+                                                self.cur_defl_databank.client_weights.iter().for_each(
                                                     |(client_name, _)| {
                                                         info!("        Client [{}].", client_name);
                                                     },
                                                 );
-                                                self.last_node_info
+                                                self.last_defl_databank
                                                     .lock()
                                                     .unwrap()
-                                                    .clone_from(&self.cur_node_info);
-                                                self.cur_node_info.epoch_id += 1;
-                                                self.cur_node_info.client_weights.clear();
+                                                    .clone_from(&self.cur_defl_databank);
+                                                self.cur_defl_databank.epoch_id += 1;
+                                                self.cur_defl_databank.client_weights.clear();
                                                 self.voted_clients.clear();
-                                                info!("DONG: `cur_node_info` updated.");
+                                                info!("Entering new epoch.");
                                                 Status::Ok.into()
                                             }
                                         } else {
                                             warn!(
-                                                "DONG: Client [{}] has already voted.",
+                                                "Client [{}] has already voted.",
                                                 client_name
                                             );
                                             Status::ClientAlreadyVotedError.into()
                                         }
                                     } else {
-                                        warn!("DONG: UNEXPECTED_EPOCH_ID [{}] epoch_id={}", client_name, target_epoch_id);
+                                        warn!("UNEXPECTED_EPOCH_ID [{}] epoch_id={}", client_name, target_epoch_id);
                                         Status::NerTargetEpochIdError.into()
                                     }
                                 } else {
-                                    warn!("DONG: No `target_epoch_id` field in request.");
+                                    warn!("No `target_epoch_id` field in request.");
                                     Status::NerTargetEpochIdError.into()
                                 }
                             }
                             _ => {
-                                warn!("DONG: Block should be filtered out previously. Ignoring...");
+                                warn!("Block should be filtered out previously. Ignoring...");
                                 Status::ServerInternalError.into()
                             }
                         };
@@ -229,13 +229,16 @@ impl Node {
                             .await
                         {
                             Ok(len) => {
-                                info!("DONG: Responded [{}]\tbytes={}\trequest_uuid={}", client_name, len, request_uuid);
+                                info!("Responded [{}] bytes={} request_uuid={}", client_name, len, request_uuid);
                             }
-                            Err(RespondError::NotRegisteredError { client_name: _ }) => {
-                                info!("DONG: Client [{}] is not registered.", client_name);
+                            Err(RespondError::RegistrationError { client_name: _ }) => {
+                                info!("Client [{}] is not registered.", client_name);
                             }
                             Err(RespondError::NetworkError { client_name: _ }) => {
-                                warn!("DONG: Network error occurred while responding to [{}].", client_name);
+                                warn!("Network error occurred while responding to [{}].", client_name);
+                            }
+                            Err(RespondError::ContactsLockPoisonError) => {
+                                warn!("`contacts` lock poison error occurred while responding to [{}].", client_name);
                             }
                         }
                     }

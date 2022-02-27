@@ -142,7 +142,7 @@ impl Client {
 
                 let tx_str = base64::encode(&bytes);
 
-                info!("DONG: Send [{}].", tx_str);
+                info!("Send [{}].", tx_str);
 
                 if let Err(e) = transport.send(bytes).await {
                     warn!("Failed to send transaction: {}", e);

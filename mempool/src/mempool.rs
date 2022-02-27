@@ -4,14 +4,14 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use bytes::Bytes;
 use futures::sink::SinkExt as _;
-use log::{info, warn};
+use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 use crypto::{Digest, PublicKey};
 use network::{MessageHandler, Receiver as NetworkReceiver, Writer};
 use proto::defl_sender::DeflSender;
-use proto::NodeInfo;
+use proto::DeflDatabank;
 use store::Store;
 
 use crate::batch_maker::{Batch, BatchMaker, Transaction};
@@ -70,7 +70,7 @@ impl Mempool {
         rx_consensus: Receiver<ConsensusMempoolMessage>,
         tx_consensus: Sender<Digest>,
         defl_sender: DeflSender,
-        node_info: Arc<Mutex<NodeInfo>>,
+        defl_databank: Arc<Mutex<DeflDatabank>>,
     ) {
         // NOTE: This log entry is used to compute performance.
         parameters.log();
@@ -86,7 +86,7 @@ impl Mempool {
 
         // Spawn all mempool tasks.
         mempool.handle_consensus_messages(rx_consensus);
-        mempool.handle_clients_transactions(defl_sender, node_info);
+        mempool.handle_clients_transactions(defl_sender, defl_databank);
         mempool.handle_mempool_messages();
 
         info!(
@@ -118,7 +118,7 @@ impl Mempool {
     fn handle_clients_transactions(
         &self,
         defl_sender: DeflSender,
-        node_info: Arc<Mutex<NodeInfo>>,
+        defl_databank: Arc<Mutex<DeflDatabank>>,
     ) {
         let (tx_filter, rx_filter) = channel(CHANNEL_CAPACITY);
         let (tx_batch_maker, rx_batch_maker) = channel(CHANNEL_CAPACITY);
@@ -133,7 +133,7 @@ impl Mempool {
         address.set_ip("127.0.0.1".parse().unwrap());
         NetworkReceiver::spawn(address, /* handler */ TxReceiverHandler { tx_filter });
 
-        TransactionFilter::spawn(defl_sender, node_info, rx_filter, tx_batch_maker);
+        TransactionFilter::spawn(defl_sender, defl_databank, rx_filter, tx_batch_maker);
 
         // The transactions are sent to the `BatchMaker` that assembles them into batches. It then broadcasts
         // (in a reliable manner) the batches to all other mempools that share the same `id` as us. Finally,
@@ -214,7 +214,7 @@ struct TxReceiverHandler {
 #[async_trait]
 impl MessageHandler for TxReceiverHandler {
     async fn dispatch(&self, writer: &mut Writer, message: Bytes) -> Result<(), Box<dyn Error>> {
-        info!("DONG: Sending Ack");
+        debug!("Sending Ack to client");
         // Immediate response to the client.
         let _ = writer.send(Bytes::from("Ack")).await;
 

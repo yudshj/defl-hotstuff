@@ -73,7 +73,7 @@ class IpcCommitter:
                     queue = self.__response_map[response.request_uuid]
                     del self.__response_map[response.request_uuid]
                 else:
-                    logging.warn(f'Received response for unknown request {response.request_uuid}')
+                    logging.warning(f'Received response for unknown request {response.request_uuid}')
             await queue.put(response)
 
     async def collect(self, client_request: ClientRequest) -> Response:
