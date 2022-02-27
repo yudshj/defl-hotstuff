@@ -116,6 +116,10 @@ impl Node {
     pub async fn analyze_block(&mut self) {
         while let Some(block) = self.commit.recv().await {
             // This is where we can further process committed block.
+            if block.payload.is_empty() {
+                info!("Analyzing empty block {:?}" , block);
+                continue;
+            }
             for digest in block.payload {
                 let serialized_batch = self
                     .block_store
@@ -125,11 +129,10 @@ impl Node {
                     .expect("DONG: Digest not in `block_store`.");
                 // SerializedBatchMessage
                 if let Ok(MempoolMessage::Batch(batch)) =
-                    bincode::deserialize(serialized_batch.as_slice())
+                bincode::deserialize(serialized_batch.as_slice())
                 {
                     info!("DONG: Analyzing BATCH_LEN={} batch...", batch.len());
                     for client_tx in batch {
-                        info!("analyze_block client_tx digest: {:?}", Sha512::digest(&client_tx));
                         let ClientRequest {
                             method,
                             request_uuid,
@@ -231,7 +234,7 @@ impl Node {
                             .await
                         {
                             Ok(len) => {
-                                info!("DONG: Responded [{}]\nbytes={}\nrequest_uuid={}", client_name, len, request_uuid);
+                                info!("DONG: Responded [{}]\tbytes={}\trequest_uuid={}", client_name, len, request_uuid);
                             }
                             Err(RespondError::NotRegisteredError { client_name: _ }) => {
                                 info!("DONG: Client [{}] is not registered.", client_name);

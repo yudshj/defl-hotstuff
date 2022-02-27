@@ -16,6 +16,19 @@ NUM_BYZANTINE = 1
 LOCAL_TRAIN_EPOCHS = 1
 INIT_MODEL_PATH = 'defl/data/init_model.h5'
 
+async def load_data():
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+    x_train = x_train[:1000]
+    y_train = y_train[:1000]
+    x_train = x_train.astype('float32')
+    x_test = x_test.astype('float32')
+    x_train /= 255
+    x_test /= 255
+    y_train = tf.keras.utils.to_categorical(y_train, 10)
+    y_test = tf.keras.utils.to_categorical(y_test, 10)
+    train_data = (x_train, y_train)
+    test_data = (x_test, y_test)
+    return train_data, test_data
 
 async def main():
     formatter = logging.Formatter(r"[%(asctime)s - %(levelname)s - %(funcName)s]: %(message)s")
@@ -37,17 +50,7 @@ async def main():
     args = parser.parse_args()
 
     # learning stuff
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
-    x_train = x_train[:1000]
-    y_train = y_train[:1000]
-    x_train = x_train.astype('float32')
-    x_test = x_test.astype('float32')
-    x_train /= 255
-    x_test /= 255
-    y_train = tf.keras.utils.to_categorical(y_train, 10)
-    y_test = tf.keras.utils.to_categorical(y_test, 10)
-    train_data = (x_train, y_train)
-    test_data = (x_test, y_test)
+    train_data, test_data = await load_data()
     model = tf.keras.models.load_model(INIT_MODEL_PATH)
     model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy'])
     trainer = Trainer(
@@ -79,15 +82,26 @@ async def main():
             logging.debug("Creating GST event...")
             gst_event = asyncio.create_task(asyncio.sleep(args.gst / 1000.0))
 
+            # aggregate weights
+            logging.info("Aggregating weights...")
             await trainer.aggregate_weights(fetch_resp.w_last)
+
+            # test accuracy
+            score = await trainer.evaluate()
+            logging.info('[AGGREGATED] Test loss: {0[0]}, test accuracy: {0[1]}'.format(score))
+
             # local_train
             logging.info("Local training...")
             cur_weights = await trainer.local_train()
 
+            # test accuracy
+            score = await trainer.evaluate()
+            logging.info('[LOCAL_TRAIN] Test loss: {0[0]}, test accuracy: {0[1]}'.format(score))
+
+            # send weights
             logging.info("Updating weights...")
             upd_weight_resp = await committer.new_weights(fetch_resp.r_last_epoch_id + 1, cur_weights)
             logging.debug(f'Collected: {Response.Status.Name(upd_weight_resp.stat)} with {upd_weight_resp.ByteSize()} bytes')
-            # assert r.stat == Response.Status.OK
             epoch_id = fetch_resp.r_last_epoch_id + 1
             last_weights = cur_weights
 

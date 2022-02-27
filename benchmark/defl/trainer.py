@@ -5,7 +5,7 @@ import zstd
 
 import tensorflow as tf
 
-from typing import Dict
+from typing import Dict, List
 from tensorflow.python.keras.saving import hdf5_format
 
 
@@ -33,9 +33,6 @@ class Trainer:
             w_agg = self.agg.aggregate(self.num_byzantine)
             self.model.set_weights(w_agg)
             self.agg.clear_aggregator()
-            # test accuracy
-            score = self.model.evaluate(self.test_data[0], self.test_data[1], verbose=0)
-            logging.info('[AGGREGATED] Test loss: {0[0]}, test accuracy: {0[1]}'.format(score))
 
     async def local_train(self) -> bytes:
         '''Return the weights of the model after local training'''
@@ -51,3 +48,6 @@ class Trainer:
                 hdf5_format.save_weights_to_hdf5_group(f, self.model.layers)
             payload = bytes_file.getvalue()
         return zstd.compress(payload, 9)
+    
+    async def evaluate(self) -> List:
+        return self.model.evaluate(self.test_data[0], self.test_data[1], verbose=0)

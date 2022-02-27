@@ -78,9 +78,13 @@ impl Proposer {
             /* payload */ self.buffer.drain().collect(),
             self.signature_service.clone(),
         )
-        .await;
+            .await;
 
         debug!("Created {:?}", block);
+
+        if block.payload.is_empty() {
+            warn!("Made empty block {:?}", block);
+        }
 
         // Broadcast our new block.
         debug!("Broadcasting {:?}", block);

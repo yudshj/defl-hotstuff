@@ -69,7 +69,7 @@ impl TransactionFilter {
                             .await
                         {
                             Ok(len) => info!(
-                                "Responded FETCH_W_LAST [{}]\nepoch_id={}\nbytes={}\nrequest_uuid={}",
+                                "Responded FETCH_W_LAST [{}]\tepoch_id={}\tbytes={}\trequest_uuid={}",
                                 client_name, node_info.epoch_id, len, request_uuid
                             ),
                             Err(_) => warn!("Failed to respond FETCH_W_LAST [{}].", client_name),
