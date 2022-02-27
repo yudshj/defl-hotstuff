@@ -62,7 +62,7 @@ impl Proposer {
     }
 
     async fn make_block(&mut self, round: Round, qc: QC, tc: Option<TC>) {
-        if self.buffer.is_empty() {
+        if round > 5 && self.buffer.is_empty() {
             if tc.is_none() {
                 warn!("Not now to make a new block...");
                 return;

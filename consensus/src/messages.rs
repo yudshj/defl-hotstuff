@@ -75,7 +75,7 @@ impl Block {
         if let Some(ref tc) = self.tc {
             tc.verify(committee)?;
         } else {
-            if self.payload.is_empty() {
+            if self.round > 5 && self.payload.is_empty() {
                 return Err(ConsensusError::InvalidPayload);
             }
         }
