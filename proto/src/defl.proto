@@ -11,34 +11,47 @@ message RegisterInfo {
 
 message ClientRequest {
   enum Method {
-    FETCH_W_LAST = 0;
-    UPD_WEIGHTS = 1;
-    NEW_EPOCH_REQUEST = 2;
-    // Registration
-    CLIENT_REGISTER = 7;
+    UPD_WEIGHTS = 0;
+    NEW_EPOCH_REQUEST = 1;
   }
 
   Method method = 1;
   string request_uuid = 2;
   string client_name = 3;
-  optional int64 target_epoch_id = 4;
+  int64 target_epoch_id = 4;
   optional bytes weights = 5;
-  optional RegisterInfo register_info = 6;
+}
+
+message ObsidoRequest {
+  enum Method {
+    FETCH_W_LAST = 0;
+    CLIENT_REGISTER = 1;
+  }
+
+  Method method = 1;
+  string request_uuid = 2;
+  string client_name = 3;
+  optional RegisterInfo register_info = 4;
 }
 
 message Response {
   enum Status {
-    OK = 0;
-    NOT_MEET_QUORUM_WAIT = 1;
-    UW_TARGET_EPOCH_ID_ERROR = 10;
-    NER_TARGET_EPOCH_ID_ERROR = 11;
-    NO_WEIGHTS_IN_REQUEST_ERROR = 20;
-    CLIENT_ALREADY_VOTED_ERROR = 30;
-    SERVER_INTERNAL_ERROR = 40;
+    OK = 0x00;
+    NOT_MEET_QUORUM_WAIT = 0x01;
+    UW_TARGET_EPOCH_ID_ERROR = 0x10;
+    NER_TARGET_EPOCH_ID_ERROR = 0x11;
+    NO_WEIGHTS_IN_REQUEST_ERROR = 0x20;
+    CLIENT_ALREADY_VOTED_ERROR = 0x30;
+    SERVER_INTERNAL_ERROR = 0xff;
   }
   Status stat = 1;
-  string request_uuid = 2;
-  string response_uuid = 3;
-  optional int64 r_last_epoch_id = 4;
-  map<string, bytes> w_last = 5;
+  string response_uuid = 2;
+  string request_uuid = 3;
+}
+
+message WeightsResponse {
+  string response_uuid = 1;
+  optional string request_uuid = 2;
+  int64 r_last_epoch_id = 3;
+  map<string, bytes> w_last = 4;
 }

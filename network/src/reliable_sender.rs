@@ -189,10 +189,14 @@ impl Connection {
         // which we are still waiting to receive an ACK.
         let mut pending_replies = VecDeque::new();
 
-        let (mut writer, mut reader) = Framed::new(stream, LengthDelimitedCodec::builder()
-            .length_field_length(8)
-            .max_frame_length(8 * 1024 * 1024 * 1024) /* 8 GiB */
-            .new_codec()).split();
+        let (mut writer, mut reader) = Framed::new(
+            stream,
+            LengthDelimitedCodec::builder()
+                .length_field_length(8)
+                .max_frame_length(8 * 1024 * 1024 * 1024) /* 8 GiB */
+                .new_codec(),
+        )
+            .split();
         let error = 'connection: loop {
             // Try to send all messages of the buffer.
             while let Some((data, handler)) = self.buffer.pop_front() {

@@ -115,7 +115,7 @@ impl Connection {
                     .max_frame_length(8 * 1024 * 1024 * 1024) /* 8 GiB */
                     .new_codec();
                 Framed::new(stream, codec).split()
-            },
+            }
             Err(e) => {
                 warn!(
                     "{}",

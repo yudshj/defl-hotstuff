@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -10,8 +9,6 @@ use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 use crypto::{Digest, PublicKey};
 use network::{MessageHandler, Receiver as NetworkReceiver, Writer};
-use proto::defl_sender::DeflSender;
-use proto::DeflDatabank;
 use store::Store;
 
 use crate::batch_maker::{Batch, BatchMaker, Transaction};
@@ -20,7 +17,6 @@ use crate::helper::Helper;
 use crate::processor::{Processor, SerializedBatchMessage};
 use crate::quorum_waiter::QuorumWaiter;
 use crate::synchronizer::Synchronizer;
-use crate::transaction_filter::TransactionFilter;
 
 #[cfg(test)]
 #[path = "tests/mempool_tests.rs"]
@@ -69,8 +65,6 @@ impl Mempool {
         store: Store,
         rx_consensus: Receiver<ConsensusMempoolMessage>,
         tx_consensus: Sender<Digest>,
-        defl_sender: DeflSender,
-        defl_databank: Arc<Mutex<DeflDatabank>>,
     ) {
         // NOTE: This log entry is used to compute performance.
         parameters.log();
@@ -86,7 +80,7 @@ impl Mempool {
 
         // Spawn all mempool tasks.
         mempool.handle_consensus_messages(rx_consensus);
-        mempool.handle_clients_transactions(defl_sender, defl_databank);
+        mempool.handle_clients_transactions();
         mempool.handle_mempool_messages();
 
         info!(
@@ -117,10 +111,8 @@ impl Mempool {
     /// Spawn all tasks responsible to handle clients transactions.
     fn handle_clients_transactions(
         &self,
-        defl_sender: DeflSender,
-        defl_databank: Arc<Mutex<DeflDatabank>>,
     ) {
-        let (tx_filter, rx_filter) = channel(CHANNEL_CAPACITY);
+        // let (tx_filter, rx_filter) = channel(CHANNEL_CAPACITY);
         let (tx_batch_maker, rx_batch_maker) = channel(CHANNEL_CAPACITY);
         let (tx_quorum_waiter, rx_quorum_waiter) = channel(CHANNEL_CAPACITY);
         let (tx_processor, rx_processor) = channel(CHANNEL_CAPACITY);
@@ -131,9 +123,9 @@ impl Mempool {
             .transactions_address(&self.name)
             .expect("Our public key is not in the committee");
         address.set_ip("127.0.0.1".parse().unwrap());
-        NetworkReceiver::spawn(address, /* handler */ TxReceiverHandler { tx_filter });
+        NetworkReceiver::spawn(address, /* handler */ TxReceiverHandler { tx_batch_maker });
 
-        TransactionFilter::spawn(defl_sender, defl_databank, rx_filter, tx_batch_maker);
+        // TransactionFilter::spawn(rx_filter, tx_batch_maker);
 
         // The transactions are sent to the `BatchMaker` that assembles them into batches. It then broadcasts
         // (in a reliable manner) the batches to all other mempools that share the same `id` as us. Finally,
@@ -208,7 +200,7 @@ impl Mempool {
 /// Defines how the network receiver handles incoming transactions.
 #[derive(Clone)]
 struct TxReceiverHandler {
-    tx_filter: Sender<Transaction>,
+    tx_batch_maker: Sender<Transaction>,
 }
 
 #[async_trait]
@@ -219,7 +211,7 @@ impl MessageHandler for TxReceiverHandler {
         let _ = writer.send(Bytes::from("Ack")).await;
 
         // Send the transaction to the batch maker.
-        self.tx_filter
+        self.tx_batch_maker
             .send(message.to_vec())
             .await
             .expect("Failed to send transaction");

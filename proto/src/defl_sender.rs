@@ -8,21 +8,17 @@ use thiserror::Error;
 
 use network::SimpleSender;
 
-use crate::defl::Response;
+use crate::defl::{Response, WeightsResponse};
 use crate::defl_sender::RespondError::ContactsLockPoisonError;
 use crate::SimpleRegisterInfo;
 
 #[derive(Error, Debug)]
 pub enum RespondError {
     #[error("Client {client_name} not registered")]
-    RegistrationError {
-        client_name: String,
-    },
+    RegistrationError { client_name: String },
 
     #[error("Failed to send some data to client {client_name} due to network error.")]
-    NetworkError {
-        client_name: String,
-    },
+    NetworkError { client_name: String },
 
     #[error("R/w contacts error.")]
     ContactsLockPoisonError,
@@ -62,7 +58,19 @@ impl DeflSender {
         client_name: String,
         response: Response,
     ) -> Result<usize, RespondError> {
-        let SimpleRegisterInfo { host, port, pasv_host: _, pasv_port: _ } = self.contacts.read()?.get(&client_name).ok_or(RespondError::RegistrationError { client_name: client_name.clone() })?.clone();
+        let SimpleRegisterInfo {
+            host,
+            port,
+            pasv_host: _,
+            pasv_port: _,
+        } = self
+            .contacts
+            .read()?
+            .get(&client_name)
+            .ok_or(RespondError::RegistrationError {
+                client_name: client_name.clone(),
+            })?
+            .clone();
         let data: Vec<u8> = response.encode_to_vec();
         let length = data.len();
         let address = SocketAddr::new(host.parse().unwrap(), port);
@@ -73,11 +81,29 @@ impl DeflSender {
         }
     }
 
+    /// Returns the bytes of the response if successful, otherwise returns an error.
+    pub async fn respond_to_client_passive(
+        &mut self,
+        response: WeightsResponse,
+    ) -> Result<usize, RespondError> {
+        let contacts = self.contacts.read()?.clone();
+        let data: Vec<u8> = response.encode_to_vec();
+        let length = data.len();
+        for (_, SimpleRegisterInfo { pasv_host, pasv_port, host: _host, port: _port }) in contacts {
+            let address = SocketAddr::new(pasv_host.parse().unwrap(), pasv_port);
+            self.sender.send(address, data.clone().into()).await;
+        }
+        Ok(length)
+    }
+
     pub async fn client_register(
         &mut self,
         client_name: String,
         register_info: SimpleRegisterInfo,
     ) {
-        self.contacts.write().unwrap().insert(client_name, register_info);
+        self.contacts
+            .write()
+            .unwrap()
+            .insert(client_name, register_info);
     }
 }

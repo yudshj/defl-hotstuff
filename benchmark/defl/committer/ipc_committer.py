@@ -6,22 +6,21 @@ from typing import Dict
 
 # from defl.committer import Committer
 from defl.committer.utils import LengthDelimitedCodec
-from proto.defl_pb2 import ClientRequest, Response, RegisterInfo
+from proto.defl_pb2 import ClientRequest, Response, RegisterInfo, WeightsResponse, ObsidoRequest
 
 
 class IpcCommitter:
     def __init__(self,
                  client_name: str,
                  server_host: str,
-                 server_port: int,
-                 tx_replica_timeout=1,
-                 rx_replica_timeout=3600,
+                 consensus_port: int,
+                 obsido_port: int,
+                 fetch_queue: Queue,
                  listen_backlog=5):
         self.client_name = client_name
         self.server_host = server_host
-        self.server_port = server_port
-        self.tx_replica_timeout = tx_replica_timeout
-        self.rx_replica_timeout = rx_replica_timeout
+        self.consensus_port = consensus_port
+        self.obsido_port = obsido_port
         self.listen_backlog = listen_backlog
 
         # async net stuff
@@ -29,7 +28,10 @@ class IpcCommitter:
         self.active_server = None
         self.replica_tx = None
         self.replica_rx = None
+        self.obsido_tx = None
+        self.obsido_rx = None
         self.codec = LengthDelimitedCodec(8)
+        self.fetch_queue = fetch_queue
 
         # async sync stuff
         self.__response_map: Dict[str, Queue] = {}
@@ -39,24 +41,26 @@ class IpcCommitter:
         logging.info('Starting active server')
         self.active_server = await asyncio.start_server(self.handle_active, '127.0.0.1', 0)
         logging.info('Starting passive server')
-        self.passive_server = await asyncio.start_server(self.handle_active, '127.0.0.1', 0)
+        self.passive_server = await asyncio.start_server(self.handle_passive, '127.0.0.1', 0)
         logging.info('Started servers')
 
     async def connect_to_server(self):
         while True:
             try:
-                self.replica_rx, self.replica_tx = await asyncio.open_connection(self.server_host, self.server_port)
+                self.replica_rx, self.replica_tx = await asyncio.open_connection(self.server_host, self.consensus_port)
+                self.obsido_rx, self.obsido_tx = await asyncio.open_connection(self.server_host, self.obsido_port)
                 break
             except ConnectionRefusedError:
                 logging.warning('Connection refused, retrying...')
                 await asyncio.sleep(0.1)
         logging.info('Connected to server')
 
-    async def transmit(self, client_request: ClientRequest) -> bool:
+    async def transmit(self, client_request, tx, rx) -> bool:
         msg = client_request.SerializeToString()
-        logging.debug(f'Transmitting [{client_request.request_uuid}] {ClientRequest.Method.Name(client_request.method)} with {len(msg)} bytes')
-        await self.codec.async_length_delimited_send(self.replica_tx, msg)
-        resp = await self.codec.async_length_delimited_recv(self.replica_rx)
+        logging.debug(
+            f'Transmitting [{client_request.request_uuid}] {client_request.Method.Name(client_request.method)} with {len(msg)} bytes')
+        await self.codec.async_length_delimited_send(tx, msg)
+        resp = await self.codec.async_length_delimited_recv(rx)
         resp = resp.decode()
         logging.debug(f'Immediate response: {resp}')
         return resp == 'Ack'
@@ -67,7 +71,8 @@ class IpcCommitter:
             logging.debug(f'Received {len(resp)} bytes')
             response = Response()
             response.ParseFromString(resp)
-            logging.debug(f'HANDLE [{response.request_uuid}] {Response.Status.Name(response.stat)}\n\tresponse_uuid={response.response_uuid}')
+            logging.debug(
+                f'HANDLE [{response.request_uuid}] {Response.Status.Name(response.stat)}\n\tresponse_uuid={response.response_uuid}')
             async with self.__response_map_lock:
                 if response.request_uuid in self.__response_map:
                     queue = self.__response_map[response.request_uuid]
@@ -75,6 +80,15 @@ class IpcCommitter:
                 else:
                     logging.warning(f'Received response for unknown request {response.request_uuid}')
             await queue.put(response)
+
+    async def handle_passive(self, reader, writer):
+        while True:
+            resp = await self.codec.async_length_delimited_recv(reader)
+            logging.info(f'LAST_WEIGHTS Received {len(resp)} bytes')
+            response = WeightsResponse()
+            response.ParseFromString(resp)
+            logging.info(f'LAST_WEIGHTS HANDLE [{response.response_uuid}]')
+            await self.fetch_queue.put(response)
 
     async def collect(self, client_request: ClientRequest) -> Response:
         request_uuid = client_request.request_uuid
@@ -87,8 +101,8 @@ class IpcCommitter:
         return response
 
     async def client_register(self) -> bool:
-        client_request = ClientRequest(
-            method=ClientRequest.Method.CLIENT_REGISTER,
+        client_request = ObsidoRequest(
+            method=ObsidoRequest.Method.CLIENT_REGISTER,
             request_uuid=str(uuid.uuid4()),
             register_info=RegisterInfo(
                 host='127.0.0.1',
@@ -97,10 +111,8 @@ class IpcCommitter:
                 pasv_port=self.passive_server.sockets[0].getsockname()[1],
             ),
             client_name=self.client_name,
-            target_epoch_id=None,
-            weights=None,
         )
-        return await self.transmit(client_request)
+        return await self.transmit(client_request, self.obsido_tx, self.obsido_rx)
 
     async def committer_bootstrap(self) -> bool:
         """Return if the client is successfully registered to the server"""
@@ -112,17 +124,14 @@ class IpcCommitter:
         asyncio.create_task(self.passive_server.serve_forever())
         return await self.client_register()
 
-    async def fetch_w_last(self) -> Response:
-        client_request = ClientRequest(
-            method=ClientRequest.Method.FETCH_W_LAST,
+    async def fetch_w_last(self):
+        client_request = ObsidoRequest(
+            method=ObsidoRequest.Method.FETCH_W_LAST,
             request_uuid=str(uuid.uuid4()),
             client_name=self.client_name,
-            target_epoch_id=None,
-            weights=None,
             register_info=None,
         )
-        assert await self.transmit(client_request)
-        return await self.collect(client_request)
+        assert await self.transmit(client_request, self.obsido_tx, self.obsido_rx)
 
     async def new_weights(self, target_epoch_id: int, weights_b: bytes) -> Response:
         client_request = ClientRequest(
@@ -131,9 +140,8 @@ class IpcCommitter:
             client_name=self.client_name,
             target_epoch_id=target_epoch_id,
             weights=weights_b,
-            register_info=None,
         )
-        assert await self.transmit(client_request)
+        assert await self.transmit(client_request, self.replica_tx, self.replica_rx)
         return await self.collect(client_request)
 
     async def new_epoch_request(self, target_epoch_id: int) -> Response:
@@ -143,7 +151,24 @@ class IpcCommitter:
             client_name=self.client_name,
             target_epoch_id=target_epoch_id,
             weights=None,
-            register_info=None,
         )
-        assert await self.transmit(client_request)
+        assert await self.transmit(client_request, self.replica_tx, self.replica_rx)
         return await self.collect(client_request)
+
+
+class ObsidoResponseQueue(asyncio.Queue):
+    def __init__(self):
+        super().__init__()
+
+    async def drain(self) -> WeightsResponse:
+        fetch_resp: WeightsResponse = await self.get()
+        logging.info(f"response_uuid={fetch_resp.response_uuid} epoch_id={fetch_resp.r_last_epoch_id}")
+        while True:
+            try:
+                pending_fetch_resp = self.get_nowait()
+                logging.info(f"response_uuid={pending_fetch_resp.response_uuid} epoch_id={fetch_resp.r_last_epoch_id}")
+                if fetch_resp.r_last_epoch_id < pending_fetch_resp.r_last_epoch_id:
+                    fetch_resp = pending_fetch_resp
+            except asyncio.QueueEmpty:
+                break
+        return fetch_resp

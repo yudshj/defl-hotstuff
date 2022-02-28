@@ -32,6 +32,7 @@ async fn main() {
         .subcommand(
             SubCommand::with_name("run")
                 .about("Runs a single node")
+                .args_from_usage("--obsido=<INT> 'The port that obsido use.'")
                 .args_from_usage("--keys=<FILE> 'The file containing the node keys'")
                 .args_from_usage("--committee=<FILE> 'The file containing committee information'")
                 .args_from_usage("--parameters=[FILE] 'The file containing the node parameters'")
@@ -69,12 +70,14 @@ async fn main() {
             let committee_file = subm.value_of("committee").unwrap();
             let parameters_file = subm.value_of("parameters");
             let store_path = subm.value_of("store").unwrap();
+            let obsido_port = subm.value_of("obsido").unwrap().parse().unwrap();
             match Node::new(
                 committee_file,
                 key_file,
                 store_path,
                 parameters_file,
                 QUORUM_SIZE,
+                obsido_port
             )
                 .await
             {
@@ -90,8 +93,9 @@ async fn main() {
         }
         ("deploy", Some(subm)) => {
             let nodes = subm.value_of("nodes").unwrap();
+            let obsido_port = subm.value_of("obsido").unwrap().parse().unwrap();
             match nodes.parse::<usize>() {
-                Ok(nodes) if nodes > 1 => match deploy_testbed(nodes) {
+                Ok(nodes) if nodes > 1 => match deploy_testbed(nodes, obsido_port) {
                     Ok(handles) => {
                         let _ = join_all(handles).await;
                     }
@@ -104,7 +108,7 @@ async fn main() {
     }
 }
 
-fn deploy_testbed(nodes: usize) -> Result<Vec<JoinHandle<()>>, Box<dyn std::error::Error>> {
+fn deploy_testbed(nodes: usize, obsido_port: u16) -> Result<Vec<JoinHandle<()>>, Box<dyn std::error::Error>> {
     let keys: Vec<_> = (0..nodes).map(|_| Secret::new()).collect();
 
     // Print the committee file.
@@ -154,7 +158,7 @@ fn deploy_testbed(nodes: usize) -> Result<Vec<JoinHandle<()>>, Box<dyn std::erro
             let _ = fs::remove_dir_all(&store_path);
 
             Ok(tokio::spawn(async move {
-                match Node::new(committee_file, &key_file, &store_path, None, QUORUM_SIZE).await {
+                match Node::new(committee_file, &key_file, &store_path, None, QUORUM_SIZE, obsido_port).await {
                     Ok(mut node) => {
                         // Sink the commit channel.
                         while node.commit.recv().await.is_some() {}

@@ -1,3 +1,6 @@
+pub use crate::config::{Committee, Parameters};
+pub use crate::mempool::{ConsensusMempoolMessage, Mempool, MempoolMessage};
+
 mod batch_maker;
 mod config;
 mod helper;
@@ -9,7 +12,4 @@ mod synchronizer;
 #[cfg(test)]
 #[path = "tests/common.rs"]
 mod common;
-mod transaction_filter;
 
-pub use crate::config::{Committee, Parameters};
-pub use crate::mempool::{ConsensusMempoolMessage, Mempool, MempoolMessage};

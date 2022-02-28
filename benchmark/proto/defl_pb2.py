@@ -14,15 +14,18 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ndefl.proto\x12\x04\x64\x65\x66l\"P\n\x0cRegisterInfo\x12\x0c\n\x04host\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\x05\x12\x11\n\tpasv_host\x18\x03 \x01(\t\x12\x11\n\tpasv_port\x18\x04 \x01(\x05\"\xd5\x02\n\rClientRequest\x12*\n\x06method\x18\x01 \x01(\x0e\x32\x1a.defl.ClientRequest.Method\x12\x14\n\x0crequest_uuid\x18\x02 \x01(\t\x12\x13\n\x0b\x63lient_name\x18\x03 \x01(\t\x12\x1c\n\x0ftarget_epoch_id\x18\x04 \x01(\x03H\x00\x88\x01\x01\x12\x14\n\x07weights\x18\x05 \x01(\x0cH\x01\x88\x01\x01\x12.\n\rregister_info\x18\x06 \x01(\x0b\x32\x12.defl.RegisterInfoH\x02\x88\x01\x01\"W\n\x06Method\x12\x10\n\x0c\x46\x45TCH_W_LAST\x10\x00\x12\x0f\n\x0bUPD_WEIGHTS\x10\x01\x12\x15\n\x11NEW_EPOCH_REQUEST\x10\x02\x12\x13\n\x0f\x43LIENT_REGISTER\x10\x07\x42\x12\n\x10_target_epoch_idB\n\n\x08_weightsB\x10\n\x0e_register_info\"\xad\x03\n\x08Response\x12#\n\x04stat\x18\x01 \x01(\x0e\x32\x15.defl.Response.Status\x12\x14\n\x0crequest_uuid\x18\x02 \x01(\t\x12\x15\n\rresponse_uuid\x18\x03 \x01(\t\x12\x1c\n\x0fr_last_epoch_id\x18\x04 \x01(\x03H\x00\x88\x01\x01\x12)\n\x06w_last\x18\x05 \x03(\x0b\x32\x19.defl.Response.WLastEntry\x1a,\n\nWLastEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x0c:\x02\x38\x01\"\xc3\x01\n\x06Status\x12\x06\n\x02OK\x10\x00\x12\x18\n\x14NOT_MEET_QUORUM_WAIT\x10\x01\x12\x1c\n\x18UW_TARGET_EPOCH_ID_ERROR\x10\n\x12\x1d\n\x19NER_TARGET_EPOCH_ID_ERROR\x10\x0b\x12\x1f\n\x1bNO_WEIGHTS_IN_REQUEST_ERROR\x10\x14\x12\x1e\n\x1a\x43LIENT_ALREADY_VOTED_ERROR\x10\x1e\x12\x19\n\x15SERVER_INTERNAL_ERROR\x10(B\x12\n\x10_r_last_epoch_idb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ndefl.proto\x12\x04\x64\x65\x66l\"P\n\x0cRegisterInfo\x12\x0c\n\x04host\x18\x01 \x01(\t\x12\x0c\n\x04port\x18\x02 \x01(\x05\x12\x11\n\tpasv_host\x18\x03 \x01(\t\x12\x11\n\tpasv_port\x18\x04 \x01(\x05\"\xd3\x01\n\rClientRequest\x12*\n\x06method\x18\x01 \x01(\x0e\x32\x1a.defl.ClientRequest.Method\x12\x14\n\x0crequest_uuid\x18\x02 \x01(\t\x12\x13\n\x0b\x63lient_name\x18\x03 \x01(\t\x12\x17\n\x0ftarget_epoch_id\x18\x04 \x01(\x03\x12\x14\n\x07weights\x18\x05 \x01(\x0cH\x00\x88\x01\x01\"0\n\x06Method\x12\x0f\n\x0bUPD_WEIGHTS\x10\x00\x12\x15\n\x11NEW_EPOCH_REQUEST\x10\x01\x42\n\n\x08_weights\"\xd9\x01\n\rObsidoRequest\x12*\n\x06method\x18\x01 \x01(\x0e\x32\x1a.defl.ObsidoRequest.Method\x12\x14\n\x0crequest_uuid\x18\x02 \x01(\t\x12\x13\n\x0b\x63lient_name\x18\x03 \x01(\t\x12.\n\rregister_info\x18\x04 \x01(\x0b\x32\x12.defl.RegisterInfoH\x00\x88\x01\x01\"/\n\x06Method\x12\x10\n\x0c\x46\x45TCH_W_LAST\x10\x00\x12\x13\n\x0f\x43LIENT_REGISTER\x10\x01\x42\x10\n\x0e_register_info\"\xa3\x02\n\x08Response\x12#\n\x04stat\x18\x01 \x01(\x0e\x32\x15.defl.Response.Status\x12\x15\n\rresponse_uuid\x18\x02 \x01(\t\x12\x14\n\x0crequest_uuid\x18\x03 \x01(\t\"\xc4\x01\n\x06Status\x12\x06\n\x02OK\x10\x00\x12\x18\n\x14NOT_MEET_QUORUM_WAIT\x10\x01\x12\x1c\n\x18UW_TARGET_EPOCH_ID_ERROR\x10\x10\x12\x1d\n\x19NER_TARGET_EPOCH_ID_ERROR\x10\x11\x12\x1f\n\x1bNO_WEIGHTS_IN_REQUEST_ERROR\x10 \x12\x1e\n\x1a\x43LIENT_ALREADY_VOTED_ERROR\x10\x30\x12\x1a\n\x15SERVER_INTERNAL_ERROR\x10\xff\x01\"\xcd\x01\n\x0fWeightsResponse\x12\x15\n\rresponse_uuid\x18\x01 \x01(\t\x12\x19\n\x0crequest_uuid\x18\x02 \x01(\tH\x00\x88\x01\x01\x12\x17\n\x0fr_last_epoch_id\x18\x03 \x01(\x03\x12\x30\n\x06w_last\x18\x04 \x03(\x0b\x32 .defl.WeightsResponse.WLastEntry\x1a,\n\nWLastEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x0c:\x02\x38\x01\x42\x0f\n\r_request_uuidb\x06proto3')
 
 
 
 _REGISTERINFO = DESCRIPTOR.message_types_by_name['RegisterInfo']
 _CLIENTREQUEST = DESCRIPTOR.message_types_by_name['ClientRequest']
+_OBSIDOREQUEST = DESCRIPTOR.message_types_by_name['ObsidoRequest']
 _RESPONSE = DESCRIPTOR.message_types_by_name['Response']
-_RESPONSE_WLASTENTRY = _RESPONSE.nested_types_by_name['WLastEntry']
+_WEIGHTSRESPONSE = DESCRIPTOR.message_types_by_name['WeightsResponse']
+_WEIGHTSRESPONSE_WLASTENTRY = _WEIGHTSRESPONSE.nested_types_by_name['WLastEntry']
 _CLIENTREQUEST_METHOD = _CLIENTREQUEST.enum_types_by_name['Method']
+_OBSIDOREQUEST_METHOD = _OBSIDOREQUEST.enum_types_by_name['Method']
 _RESPONSE_STATUS = _RESPONSE.enum_types_by_name['Status']
 RegisterInfo = _reflection.GeneratedProtocolMessageType('RegisterInfo', (_message.Message,), {
   'DESCRIPTOR' : _REGISTERINFO,
@@ -38,36 +41,56 @@ ClientRequest = _reflection.GeneratedProtocolMessageType('ClientRequest', (_mess
   })
 _sym_db.RegisterMessage(ClientRequest)
 
-Response = _reflection.GeneratedProtocolMessageType('Response', (_message.Message,), {
+ObsidoRequest = _reflection.GeneratedProtocolMessageType('ObsidoRequest', (_message.Message,), {
+  'DESCRIPTOR' : _OBSIDOREQUEST,
+  '__module__' : 'defl_pb2'
+  # @@protoc_insertion_point(class_scope:defl.ObsidoRequest)
+  })
+_sym_db.RegisterMessage(ObsidoRequest)
 
-  'WLastEntry' : _reflection.GeneratedProtocolMessageType('WLastEntry', (_message.Message,), {
-    'DESCRIPTOR' : _RESPONSE_WLASTENTRY,
-    '__module__' : 'defl_pb2'
-    # @@protoc_insertion_point(class_scope:defl.Response.WLastEntry)
-    })
-  ,
+Response = _reflection.GeneratedProtocolMessageType('Response', (_message.Message,), {
   'DESCRIPTOR' : _RESPONSE,
   '__module__' : 'defl_pb2'
   # @@protoc_insertion_point(class_scope:defl.Response)
   })
 _sym_db.RegisterMessage(Response)
-_sym_db.RegisterMessage(Response.WLastEntry)
+
+WeightsResponse = _reflection.GeneratedProtocolMessageType('WeightsResponse', (_message.Message,), {
+
+  'WLastEntry' : _reflection.GeneratedProtocolMessageType('WLastEntry', (_message.Message,), {
+    'DESCRIPTOR' : _WEIGHTSRESPONSE_WLASTENTRY,
+    '__module__' : 'defl_pb2'
+    # @@protoc_insertion_point(class_scope:defl.WeightsResponse.WLastEntry)
+    })
+  ,
+  'DESCRIPTOR' : _WEIGHTSRESPONSE,
+  '__module__' : 'defl_pb2'
+  # @@protoc_insertion_point(class_scope:defl.WeightsResponse)
+  })
+_sym_db.RegisterMessage(WeightsResponse)
+_sym_db.RegisterMessage(WeightsResponse.WLastEntry)
 
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _RESPONSE_WLASTENTRY._options = None
-  _RESPONSE_WLASTENTRY._serialized_options = b'8\001'
+  _WEIGHTSRESPONSE_WLASTENTRY._options = None
+  _WEIGHTSRESPONSE_WLASTENTRY._serialized_options = b'8\001'
   _REGISTERINFO._serialized_start=20
   _REGISTERINFO._serialized_end=100
   _CLIENTREQUEST._serialized_start=103
-  _CLIENTREQUEST._serialized_end=444
-  _CLIENTREQUEST_METHOD._serialized_start=307
-  _CLIENTREQUEST_METHOD._serialized_end=394
-  _RESPONSE._serialized_start=447
-  _RESPONSE._serialized_end=876
-  _RESPONSE_WLASTENTRY._serialized_start=614
-  _RESPONSE_WLASTENTRY._serialized_end=658
-  _RESPONSE_STATUS._serialized_start=661
-  _RESPONSE_STATUS._serialized_end=856
+  _CLIENTREQUEST._serialized_end=314
+  _CLIENTREQUEST_METHOD._serialized_start=254
+  _CLIENTREQUEST_METHOD._serialized_end=302
+  _OBSIDOREQUEST._serialized_start=317
+  _OBSIDOREQUEST._serialized_end=534
+  _OBSIDOREQUEST_METHOD._serialized_start=469
+  _OBSIDOREQUEST_METHOD._serialized_end=516
+  _RESPONSE._serialized_start=537
+  _RESPONSE._serialized_end=828
+  _RESPONSE_STATUS._serialized_start=632
+  _RESPONSE_STATUS._serialized_end=828
+  _WEIGHTSRESPONSE._serialized_start=831
+  _WEIGHTSRESPONSE._serialized_end=1036
+  _WEIGHTSRESPONSE_WLASTENTRY._serialized_start=975
+  _WEIGHTSRESPONSE_WLASTENTRY._serialized_end=1019
 # @@protoc_insertion_point(module_scope)

@@ -39,53 +39,72 @@ class ClientRequest(google.protobuf.message.Message):
         V: typing_extensions.TypeAlias = ValueType
     class _MethodEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[ClientRequest._Method.ValueType], builtins.type):
         DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
-        FETCH_W_LAST: ClientRequest._Method.ValueType  # 0
-        UPD_WEIGHTS: ClientRequest._Method.ValueType  # 1
-        NEW_EPOCH_REQUEST: ClientRequest._Method.ValueType  # 2
-        CLIENT_REGISTER: ClientRequest._Method.ValueType  # 7
-        """Registration"""
-
+        UPD_WEIGHTS: ClientRequest._Method.ValueType  # 0
+        NEW_EPOCH_REQUEST: ClientRequest._Method.ValueType  # 1
     class Method(_Method, metaclass=_MethodEnumTypeWrapper):
         pass
 
-    FETCH_W_LAST: ClientRequest.Method.ValueType  # 0
-    UPD_WEIGHTS: ClientRequest.Method.ValueType  # 1
-    NEW_EPOCH_REQUEST: ClientRequest.Method.ValueType  # 2
-    CLIENT_REGISTER: ClientRequest.Method.ValueType  # 7
-    """Registration"""
-
+    UPD_WEIGHTS: ClientRequest.Method.ValueType  # 0
+    NEW_EPOCH_REQUEST: ClientRequest.Method.ValueType  # 1
 
     METHOD_FIELD_NUMBER: builtins.int
     REQUEST_UUID_FIELD_NUMBER: builtins.int
     CLIENT_NAME_FIELD_NUMBER: builtins.int
     TARGET_EPOCH_ID_FIELD_NUMBER: builtins.int
     WEIGHTS_FIELD_NUMBER: builtins.int
-    REGISTER_INFO_FIELD_NUMBER: builtins.int
     method: global___ClientRequest.Method.ValueType
     request_uuid: typing.Text
     client_name: typing.Text
     target_epoch_id: builtins.int
     weights: builtins.bytes
-    @property
-    def register_info(self) -> global___RegisterInfo: ...
     def __init__(self,
         *,
         method: global___ClientRequest.Method.ValueType = ...,
         request_uuid: typing.Text = ...,
         client_name: typing.Text = ...,
-        target_epoch_id: typing.Optional[builtins.int] = ...,
+        target_epoch_id: builtins.int = ...,
         weights: typing.Optional[builtins.bytes] = ...,
-        register_info: typing.Optional[global___RegisterInfo] = ...,
         ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["_register_info",b"_register_info","_target_epoch_id",b"_target_epoch_id","_weights",b"_weights","register_info",b"register_info","target_epoch_id",b"target_epoch_id","weights",b"weights"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["_register_info",b"_register_info","_target_epoch_id",b"_target_epoch_id","_weights",b"_weights","client_name",b"client_name","method",b"method","register_info",b"register_info","request_uuid",b"request_uuid","target_epoch_id",b"target_epoch_id","weights",b"weights"]) -> None: ...
-    @typing.overload
-    def WhichOneof(self, oneof_group: typing_extensions.Literal["_register_info",b"_register_info"]) -> typing.Optional[typing_extensions.Literal["register_info"]]: ...
-    @typing.overload
-    def WhichOneof(self, oneof_group: typing_extensions.Literal["_target_epoch_id",b"_target_epoch_id"]) -> typing.Optional[typing_extensions.Literal["target_epoch_id"]]: ...
-    @typing.overload
+    def HasField(self, field_name: typing_extensions.Literal["_weights",b"_weights","weights",b"weights"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["_weights",b"_weights","client_name",b"client_name","method",b"method","request_uuid",b"request_uuid","target_epoch_id",b"target_epoch_id","weights",b"weights"]) -> None: ...
     def WhichOneof(self, oneof_group: typing_extensions.Literal["_weights",b"_weights"]) -> typing.Optional[typing_extensions.Literal["weights"]]: ...
 global___ClientRequest = ClientRequest
+
+class ObsidoRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+    class _Method:
+        ValueType = typing.NewType('ValueType', builtins.int)
+        V: typing_extensions.TypeAlias = ValueType
+    class _MethodEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[ObsidoRequest._Method.ValueType], builtins.type):
+        DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
+        FETCH_W_LAST: ObsidoRequest._Method.ValueType  # 0
+        CLIENT_REGISTER: ObsidoRequest._Method.ValueType  # 1
+    class Method(_Method, metaclass=_MethodEnumTypeWrapper):
+        pass
+
+    FETCH_W_LAST: ObsidoRequest.Method.ValueType  # 0
+    CLIENT_REGISTER: ObsidoRequest.Method.ValueType  # 1
+
+    METHOD_FIELD_NUMBER: builtins.int
+    REQUEST_UUID_FIELD_NUMBER: builtins.int
+    CLIENT_NAME_FIELD_NUMBER: builtins.int
+    REGISTER_INFO_FIELD_NUMBER: builtins.int
+    method: global___ObsidoRequest.Method.ValueType
+    request_uuid: typing.Text
+    client_name: typing.Text
+    @property
+    def register_info(self) -> global___RegisterInfo: ...
+    def __init__(self,
+        *,
+        method: global___ObsidoRequest.Method.ValueType = ...,
+        request_uuid: typing.Text = ...,
+        client_name: typing.Text = ...,
+        register_info: typing.Optional[global___RegisterInfo] = ...,
+        ) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["_register_info",b"_register_info","register_info",b"register_info"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["_register_info",b"_register_info","client_name",b"client_name","method",b"method","register_info",b"register_info","request_uuid",b"request_uuid"]) -> None: ...
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_register_info",b"_register_info"]) -> typing.Optional[typing_extensions.Literal["register_info"]]: ...
+global___ObsidoRequest = ObsidoRequest
 
 class Response(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
@@ -96,22 +115,39 @@ class Response(google.protobuf.message.Message):
         DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
         OK: Response._Status.ValueType  # 0
         NOT_MEET_QUORUM_WAIT: Response._Status.ValueType  # 1
-        UW_TARGET_EPOCH_ID_ERROR: Response._Status.ValueType  # 10
-        NER_TARGET_EPOCH_ID_ERROR: Response._Status.ValueType  # 11
-        NO_WEIGHTS_IN_REQUEST_ERROR: Response._Status.ValueType  # 20
-        CLIENT_ALREADY_VOTED_ERROR: Response._Status.ValueType  # 30
-        SERVER_INTERNAL_ERROR: Response._Status.ValueType  # 40
+        UW_TARGET_EPOCH_ID_ERROR: Response._Status.ValueType  # 16
+        NER_TARGET_EPOCH_ID_ERROR: Response._Status.ValueType  # 17
+        NO_WEIGHTS_IN_REQUEST_ERROR: Response._Status.ValueType  # 32
+        CLIENT_ALREADY_VOTED_ERROR: Response._Status.ValueType  # 48
+        SERVER_INTERNAL_ERROR: Response._Status.ValueType  # 255
     class Status(_Status, metaclass=_StatusEnumTypeWrapper):
         pass
 
     OK: Response.Status.ValueType  # 0
     NOT_MEET_QUORUM_WAIT: Response.Status.ValueType  # 1
-    UW_TARGET_EPOCH_ID_ERROR: Response.Status.ValueType  # 10
-    NER_TARGET_EPOCH_ID_ERROR: Response.Status.ValueType  # 11
-    NO_WEIGHTS_IN_REQUEST_ERROR: Response.Status.ValueType  # 20
-    CLIENT_ALREADY_VOTED_ERROR: Response.Status.ValueType  # 30
-    SERVER_INTERNAL_ERROR: Response.Status.ValueType  # 40
+    UW_TARGET_EPOCH_ID_ERROR: Response.Status.ValueType  # 16
+    NER_TARGET_EPOCH_ID_ERROR: Response.Status.ValueType  # 17
+    NO_WEIGHTS_IN_REQUEST_ERROR: Response.Status.ValueType  # 32
+    CLIENT_ALREADY_VOTED_ERROR: Response.Status.ValueType  # 48
+    SERVER_INTERNAL_ERROR: Response.Status.ValueType  # 255
 
+    STAT_FIELD_NUMBER: builtins.int
+    RESPONSE_UUID_FIELD_NUMBER: builtins.int
+    REQUEST_UUID_FIELD_NUMBER: builtins.int
+    stat: global___Response.Status.ValueType
+    response_uuid: typing.Text
+    request_uuid: typing.Text
+    def __init__(self,
+        *,
+        stat: global___Response.Status.ValueType = ...,
+        response_uuid: typing.Text = ...,
+        request_uuid: typing.Text = ...,
+        ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["request_uuid",b"request_uuid","response_uuid",b"response_uuid","stat",b"stat"]) -> None: ...
+global___Response = Response
+
+class WeightsResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
     class WLastEntry(google.protobuf.message.Message):
         DESCRIPTOR: google.protobuf.descriptor.Descriptor
         KEY_FIELD_NUMBER: builtins.int
@@ -125,26 +161,23 @@ class Response(google.protobuf.message.Message):
             ) -> None: ...
         def ClearField(self, field_name: typing_extensions.Literal["key",b"key","value",b"value"]) -> None: ...
 
-    STAT_FIELD_NUMBER: builtins.int
-    REQUEST_UUID_FIELD_NUMBER: builtins.int
     RESPONSE_UUID_FIELD_NUMBER: builtins.int
+    REQUEST_UUID_FIELD_NUMBER: builtins.int
     R_LAST_EPOCH_ID_FIELD_NUMBER: builtins.int
     W_LAST_FIELD_NUMBER: builtins.int
-    stat: global___Response.Status.ValueType
-    request_uuid: typing.Text
     response_uuid: typing.Text
+    request_uuid: typing.Text
     r_last_epoch_id: builtins.int
     @property
     def w_last(self) -> google.protobuf.internal.containers.ScalarMap[typing.Text, builtins.bytes]: ...
     def __init__(self,
         *,
-        stat: global___Response.Status.ValueType = ...,
-        request_uuid: typing.Text = ...,
         response_uuid: typing.Text = ...,
-        r_last_epoch_id: typing.Optional[builtins.int] = ...,
+        request_uuid: typing.Optional[typing.Text] = ...,
+        r_last_epoch_id: builtins.int = ...,
         w_last: typing.Optional[typing.Mapping[typing.Text, builtins.bytes]] = ...,
         ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["_r_last_epoch_id",b"_r_last_epoch_id","r_last_epoch_id",b"r_last_epoch_id"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["_r_last_epoch_id",b"_r_last_epoch_id","r_last_epoch_id",b"r_last_epoch_id","request_uuid",b"request_uuid","response_uuid",b"response_uuid","stat",b"stat","w_last",b"w_last"]) -> None: ...
-    def WhichOneof(self, oneof_group: typing_extensions.Literal["_r_last_epoch_id",b"_r_last_epoch_id"]) -> typing.Optional[typing_extensions.Literal["r_last_epoch_id"]]: ...
-global___Response = Response
+    def HasField(self, field_name: typing_extensions.Literal["_request_uuid",b"_request_uuid","request_uuid",b"request_uuid"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["_request_uuid",b"_request_uuid","r_last_epoch_id",b"r_last_epoch_id","request_uuid",b"request_uuid","response_uuid",b"response_uuid","w_last",b"w_last"]) -> None: ...
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_request_uuid",b"_request_uuid"]) -> typing.Optional[typing_extensions.Literal["request_uuid"]]: ...
+global___WeightsResponse = WeightsResponse
