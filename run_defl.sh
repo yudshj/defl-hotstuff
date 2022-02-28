@@ -1,5 +1,5 @@
 #!/bin/zsh
-SLEEP_SEC=90
+SLEEP_SEC="${1:-120}"
 protoc -I=proto/src/ --python_out=benchmark/proto/ --mypy_out=benchmark/proto/ defl.proto
 if [ $? -ne 0 ]; then
     echo "Failed to compile proto files"

@@ -82,7 +82,7 @@ impl DeflSender {
     }
 
     /// Returns the bytes of the response if successful, otherwise returns an error.
-    pub async fn respond_to_client_passive(
+    pub async fn respond_to_all_client(
         &mut self,
         response: WeightsResponse,
     ) -> Result<usize, RespondError> {

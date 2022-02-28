@@ -40,12 +40,12 @@ class ClientRequest(google.protobuf.message.Message):
     class _MethodEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[ClientRequest._Method.ValueType], builtins.type):
         DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
         UPD_WEIGHTS: ClientRequest._Method.ValueType  # 0
-        NEW_EPOCH_REQUEST: ClientRequest._Method.ValueType  # 1
+        NEW_EPOCH_VOTE: ClientRequest._Method.ValueType  # 1
     class Method(_Method, metaclass=_MethodEnumTypeWrapper):
         pass
 
     UPD_WEIGHTS: ClientRequest.Method.ValueType  # 0
-    NEW_EPOCH_REQUEST: ClientRequest.Method.ValueType  # 1
+    NEW_EPOCH_VOTE: ClientRequest.Method.ValueType  # 1
 
     METHOD_FIELD_NUMBER: builtins.int
     REQUEST_UUID_FIELD_NUMBER: builtins.int
@@ -116,7 +116,7 @@ class Response(google.protobuf.message.Message):
         OK: Response._Status.ValueType  # 0
         NOT_MEET_QUORUM_WAIT: Response._Status.ValueType  # 1
         UW_TARGET_EPOCH_ID_ERROR: Response._Status.ValueType  # 16
-        NER_TARGET_EPOCH_ID_ERROR: Response._Status.ValueType  # 17
+        NEV_TARGET_EPOCH_ID_ERROR: Response._Status.ValueType  # 17
         NO_WEIGHTS_IN_REQUEST_ERROR: Response._Status.ValueType  # 32
         CLIENT_ALREADY_VOTED_ERROR: Response._Status.ValueType  # 48
         SERVER_INTERNAL_ERROR: Response._Status.ValueType  # 255
@@ -126,7 +126,7 @@ class Response(google.protobuf.message.Message):
     OK: Response.Status.ValueType  # 0
     NOT_MEET_QUORUM_WAIT: Response.Status.ValueType  # 1
     UW_TARGET_EPOCH_ID_ERROR: Response.Status.ValueType  # 16
-    NER_TARGET_EPOCH_ID_ERROR: Response.Status.ValueType  # 17
+    NEV_TARGET_EPOCH_ID_ERROR: Response.Status.ValueType  # 17
     NO_WEIGHTS_IN_REQUEST_ERROR: Response.Status.ValueType  # 32
     CLIENT_ALREADY_VOTED_ERROR: Response.Status.ValueType  # 48
     SERVER_INTERNAL_ERROR: Response.Status.ValueType  # 255

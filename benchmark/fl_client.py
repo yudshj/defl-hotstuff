@@ -106,29 +106,36 @@ async def get_epoch_id_from_fetch_resp(gst_timeout, epoch_id, trainer, committer
     # aggregate weights
     logging.info("Aggregating weights...")
     await trainer.aggregate_weights(fetch_resp.w_last)
-    # test accuracy
-    score = await trainer.evaluate()
-    logging.info('[AGGREGATED] Test loss: {0[0]}, test accuracy: {0[1]}'.format(score))
+
+    # # test accuracy
+    # score = await trainer.evaluate()
+    # logging.info('[AGGREGATED] Test loss: {0[0]}, test accuracy: {0[1]}'.format(score))
+
     # local_train
     logging.info("Local training...")
     cur_weights = await trainer.local_train()
-    # test accuracy
-    score = await trainer.evaluate()
-    logging.info('[LOCAL_TRAIN] Test loss: {0[0]}, test accuracy: {0[1]}'.format(score))
+
+    # # test accuracy
+    # score = await trainer.evaluate()
+    # logging.info('[LOCAL_TRAIN] Test loss: {0[0]}, test accuracy: {0[1]}'.format(score))
+
     # send weights
     logging.info("Updating weights...")
-    upd_weight_resp = await committer.new_weights(next_epoch_id, cur_weights)
+    upd_weight_resp = await committer.update_weights(next_epoch_id, cur_weights)
     logging.debug(f'Collected: {Response.Status.Name(upd_weight_resp.stat)} with {upd_weight_resp.ByteSize()} bytes')
     # if upd_weight_resp.stat == Response.Status.OK:
     #     last_weights_to_check = cur_weights
+
     # wait_for_GST
     logging.info("Waiting for GST...")
     await gst_event
+
+    # vote for new epoch
     logging.info("Voting new epoch %d...", next_epoch_id)
-    new_epoch_resp = await committer.new_epoch_request(next_epoch_id)
+    new_epoch_resp = await committer.new_epoch_vote(next_epoch_id)
     logging.debug(f'Collected: {Response.Status.Name(new_epoch_resp.stat)} with {new_epoch_resp.ByteSize()} bytes')
     # assert r.stat == Response.Status.OK or r.stat == Response.Status.NOT_MEET_QUORUM_WAIT
-    # return last_weights_to_check
+
     return next_epoch_id
 
 
