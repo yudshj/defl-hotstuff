@@ -93,7 +93,7 @@ impl ObsidoHandler {
                         let request_uuid = response.request_uuid.clone().unwrap();
                         let response_uuid = response.response_uuid.clone();
                         match self.defl_sender
-                            .respond_to_client_passive(response)
+                            .respond_to_all_client(response)
                             .await
                         {
                             Ok(len) => info!(

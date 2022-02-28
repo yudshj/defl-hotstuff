@@ -115,26 +115,6 @@ impl Node {
         Secret::new().write(filename)
     }
 
-    pub async fn handle_upd(
-        &self,
-        target_epoch_id: i64,
-        weights: &Option<Vec<u8>>,
-    ) -> Result<(), Status> {
-        match (target_epoch_id == self.cur_defl_databank.epoch_id, weights) {
-            (true, Some(_)) => Ok(()),
-            (true, None) => Err(Status::NoWeightsInRequestError),
-            (false, _) => Err(Status::UwTargetEpochIdError),
-        }
-    }
-
-    pub async fn handle_ner(&self, target_epoch_id: i64) -> Result<(), Status> {
-        if target_epoch_id == self.cur_defl_databank.epoch_id {
-            Ok(())
-        } else {
-            Err(Status::NerTargetEpochIdError)
-        }
-    }
-
     pub async fn get_responses(
         &mut self,
         client_request: ClientRequest,
@@ -150,67 +130,67 @@ impl Node {
         let stat = match Method::from_i32(method) {
             Some(Method::UpdWeights) => {
                 info!("Batch tx: UPD_WEIGHTS");
-                match self.handle_upd(target_epoch_id, &weights).await {
-                    Ok(()) => {
+                match (target_epoch_id == self.cur_defl_databank.epoch_id, weights) {
+                    (true, Some(weights)) => {
                         if let Some(_) = self
                             .cur_defl_databank
                             .client_weights
-                            .insert(client_name, weights.unwrap())
+                            .insert(client_name, weights)
                         {
                             warn!("UPD_WEIGHTS: client_name already exists, overwriting...");
                         }
                         Status::Ok
-                    }
-                    Err(status_error) => status_error,
+                    },
+                    (true, None) => Status::NoWeightsInRequestError,
+                    (false, _) => Status::UwTargetEpochIdError,
                 }
             }
-            Some(Method::NewEpochRequest) => {
+            Some(Method::NewEpochVote) => {
                 info!("Batch tx: NEW_EPOCH_REQUEST.");
-                match self.handle_ner(target_epoch_id).await {
-                    Ok(()) => {
-                        if self.voted_clients.insert(client_name.clone()) {
-                            info!("Client [{}] voted.", client_name);
+                if target_epoch_id == self.cur_defl_databank.epoch_id {
+                    if self.voted_clients.insert(client_name.clone()) {
+                        info!("Client [{}] voted.", client_name);
 
-                            // check meet quorum
-                            if self.voted_clients.len() < self.quorum {
-                                info!(
-                                    "Not enough clients voted: {} / {}.",
-                                    self.voted_clients.len(),
-                                    self.quorum
-                                );
-                                Status::NotMeetQuorumWait
-                            } else {
-                                info!(
-                                    "Enough clients voted. Total weights: {}.",
-                                    self.cur_defl_databank.client_weights.len()
-                                );
-                                self.cur_defl_databank.client_weights.iter().for_each(
-                                    |(client_name, _)| {
-                                        info!("    Client [{}].", client_name);
-                                    },
-                                );
-                                passive_response = Some(WeightsResponse {
-                                    request_uuid: None,
-                                    response_uuid: Uuid::new_v4().to_string(),
-                                    r_last_epoch_id: self.cur_defl_databank.epoch_id,
-                                    w_last: self.cur_defl_databank.client_weights.clone(),
-                                });
-                                self.last_defl_databank
-                                    .lock()
-                                    .unwrap()
-                                    .clone_from(&self.cur_defl_databank);
-                                self.cur_defl_databank.epoch_id += 1;
-                                self.cur_defl_databank.client_weights.clear();
-                                self.voted_clients.clear();
-                                info!("Entering new epoch.");
-                                Status::Ok
-                            }
+                        // check if meet quorum
+                        if self.voted_clients.len() < self.quorum {
+                            info!(
+                                "Not enough clients voted ({} / {}).",
+                                self.voted_clients.len(),
+                                self.quorum
+                            );
+                            Status::NotMeetQuorumWait
                         } else {
-                            warn!("Client [{}] has already voted.", client_name);
-                            Status::ClientAlreadyVotedError
+                            info!(
+                                "Enough clients voted. Received updated weights: {}.",
+                                self.cur_defl_databank.client_weights.len()
+                            );
+                            self.cur_defl_databank.client_weights.iter().for_each(
+                                |(client_name, _)| {
+                                    info!("    Client [{}].", client_name);
+                                },
+                            );
+                            passive_response = Some(WeightsResponse {
+                                request_uuid: None,
+                                response_uuid: Uuid::new_v4().to_string(),
+                                r_last_epoch_id: self.cur_defl_databank.epoch_id,
+                                w_last: self.cur_defl_databank.client_weights.clone(),
+                            });
+                            self.last_defl_databank
+                                .lock()
+                                .unwrap()
+                                .clone_from(&self.cur_defl_databank);
+                            self.cur_defl_databank.epoch_id += 1;
+                            self.cur_defl_databank.client_weights.clear();
+                            self.voted_clients.clear();
+                            info!("Entering new epoch.");
+                            Status::Ok
                         }
+                    } else {
+                        warn!("Client [{}] has already voted.", client_name);
+                        Status::ClientAlreadyVotedError
                     }
-                    Err(status_error) => status_error,
+                } else {
+                    Status::NevTargetEpochIdError
                 }
             }
             _ => {
@@ -233,38 +213,22 @@ impl Node {
         let client_name = client_request.client_name.clone();
         let (response, passive_response) = self.get_responses(client_request).await;
         let request_uuid = response.request_uuid.clone();
-        match self
-            .defl_sender
-            .respond_to_client(client_name.clone(), response)
-            .await
-        {
+        match self.defl_sender.respond_to_client(client_name.clone(), response).await {
             Ok(len) => {
-                info!(
-                    "Responded [{}] bytes={} request_uuid={}",
-                    client_name, len, request_uuid
-                );
+                info!("Responded [{}] bytes={} request_uuid={}", client_name, len, request_uuid);
             }
             Err(RespondError::RegistrationError { client_name: _ }) => {
                 info!("Client [{}] is not registered.", client_name);
             }
             Err(RespondError::NetworkError { client_name: _ }) => {
-                warn!(
-                    "Network error occurred while responding to [{}].",
-                    client_name
-                );
+                warn!("Network error occurred while responding to [{}].", client_name);
             }
             Err(RespondError::ContactsLockPoisonError) => {
-                warn!(
-                    "`contacts` lock poison error occurred while responding to [{}].",
-                    client_name
-                );
+                warn!("`contacts` lock poison error occurred while responding to [{}].", client_name);
             }
         }
         if let Some(passive_response) = passive_response {
-            self.defl_sender
-                .respond_to_client_passive(passive_response)
-                .await
-                .unwrap();
+            self.defl_sender.respond_to_all_client(passive_response).await.unwrap();
         }
     }
 
@@ -286,7 +250,7 @@ impl Node {
                 if let Ok(MempoolMessage::Batch(batch)) =
                 bincode::deserialize(serialized_batch.as_slice())
                 {
-                    info!("Analyzing BATCH_LEN={} batch...", batch.len());
+                    // info!("Analyzing BATCH_LEN={} batch...", batch.len());
                     for client_tx in batch {
                         self.analyze_transaction(client_tx).await;
                     }

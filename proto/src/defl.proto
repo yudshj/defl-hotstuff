@@ -12,7 +12,7 @@ message RegisterInfo {
 message ClientRequest {
   enum Method {
     UPD_WEIGHTS = 0;
-    NEW_EPOCH_REQUEST = 1;
+    NEW_EPOCH_VOTE = 1;
   }
 
   Method method = 1;
@@ -39,7 +39,7 @@ message Response {
     OK = 0x00;
     NOT_MEET_QUORUM_WAIT = 0x01;
     UW_TARGET_EPOCH_ID_ERROR = 0x10;
-    NER_TARGET_EPOCH_ID_ERROR = 0x11;
+    NEV_TARGET_EPOCH_ID_ERROR = 0x11;
     NO_WEIGHTS_IN_REQUEST_ERROR = 0x20;
     CLIENT_ALREADY_VOTED_ERROR = 0x30;
     SERVER_INTERNAL_ERROR = 0xff;
