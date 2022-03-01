@@ -25,8 +25,8 @@ class IpcCommitter:
         # async net stuff
         self.passive_server = None
         self.active_server = None
-        self.replica_tx = None
-        self.replica_rx = None
+        self.replica_tx: Optional[StreamWriter] = None
+        self.replica_rx: Optional[StreamReader] = None
         self.obsido_tx: Optional[StreamWriter] = None
         self.obsido_rx: Optional[StreamReader] = None
         self.codec = LengthDelimitedCodec(8)
@@ -89,10 +89,9 @@ class IpcCommitter:
             logging.info(f'LAST_WEIGHTS HANDLE [{response.response_uuid}]')
             await self.fetch_queue.put(response)
 
-    async def collect(self, client_request: ClientRequest) -> Response:
-        request_uuid = client_request.request_uuid
+    async def collect(self, client_request_uuid) -> Response:
+        request_uuid = client_request_uuid
         response_queue = Queue(1)
-        logging.debug(f'COLLECT [{request_uuid}] {ClientRequest.Method.Name(client_request.method)}')
         async with self.__response_map_lock:
             self.__response_map[request_uuid] = response_queue
         response: Response = await response_queue.get()
@@ -145,8 +144,18 @@ class IpcCommitter:
             target_epoch_id=target_epoch_id,
             weights=weights_b,
         )
-        assert await self.transmit(client_request, self.replica_tx, self.replica_rx)
-        return await self.collect(client_request)
+        try:
+            assert await self.transmit(client_request, self.replica_tx, self.replica_rx)
+        except asyncio.CancelledError:
+            self.replica_tx.close()
+            await self.replica_tx.wait_closed()
+            self.replica_rx, self.replica_tx = await asyncio.open_connection(self.server_host, self.consensus_port)
+        try:
+            return await self.collect(client_request.request_uuid)
+        except asyncio.CancelledError:
+            async with self.__response_map_lock:
+                if client_request.request_uuid in self.__response_map:
+                    del self.__response_map[client_request.request_uuid]
 
     async def new_epoch_vote(self, target_epoch_id: int) -> Response:
         client_request = ClientRequest(
@@ -156,8 +165,18 @@ class IpcCommitter:
             target_epoch_id=target_epoch_id,
             weights=None,
         )
-        assert await self.transmit(client_request, self.replica_tx, self.replica_rx)
-        return await self.collect(client_request)
+        try:
+            assert await self.transmit(client_request, self.replica_tx, self.replica_rx)
+        except asyncio.CancelledError:
+            self.replica_tx.close()
+            await self.replica_tx.wait_closed()
+            self.replica_rx, self.replica_tx = await asyncio.open_connection(self.server_host, self.consensus_port)
+        try:
+            return await self.collect(client_request.request_uuid)
+        except asyncio.CancelledError:
+            async with self.__response_map_lock:
+                if client_request.request_uuid in self.__response_map:
+                    del self.__response_map[client_request.request_uuid]
 
 
 class ObsidoResponseQueue(asyncio.Queue):
