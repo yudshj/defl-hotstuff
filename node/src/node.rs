@@ -84,7 +84,7 @@ impl Node {
         Obsido::spawn(
             obsido_port,
             defl_sender.clone(),
-            last_defl_databank.clone(),
+            Arc::clone(&last_defl_databank),
         );
 
         // Run the consensus core.

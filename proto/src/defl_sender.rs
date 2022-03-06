@@ -38,7 +38,7 @@ pub struct DeflSender {
 impl Clone for DeflSender {
     fn clone(&self) -> Self {
         DeflSender {
-            contacts: self.contacts.clone(),
+            contacts: Arc::clone(&self.contacts),
             sender: SimpleSender::new(),
         }
     }

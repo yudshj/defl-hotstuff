@@ -79,19 +79,18 @@ impl ObsidoHandler {
                     client_name,
                     register_info,
                 } = client_request;
-                info!("filtering transactions {}", request_uuid.clone());
+                info!("filtering transactions {}", &request_uuid);
                 Method::FetchWLast as i32;
                 match Method::from_i32(method) {
                     Some(Method::FetchWLast) => {
                         let defl_databank = self.defl_databank.lock().unwrap().clone();
+                        let response_uuid = uuid::Uuid::new_v4().to_string();
                         let response = WeightsResponse {
-                            request_uuid: Some(request_uuid),
-                            response_uuid: uuid::Uuid::new_v4().to_string(),
+                            request_uuid: Some(request_uuid.clone()),
+                            response_uuid: response_uuid.clone(),
                             w_last: defl_databank.client_weights,
                             r_last_epoch_id: defl_databank.epoch_id,
                         };
-                        let request_uuid = response.request_uuid.clone().unwrap();
-                        let response_uuid = response.response_uuid.clone();
                         match self.defl_sender
                             .respond_to_all_client(response)
                             .await
