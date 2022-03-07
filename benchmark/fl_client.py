@@ -80,16 +80,13 @@ async def active_fetch_after(sleep_time, committer):
     await committer.fetch_w_last()
 
 
-async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, fetch_timeout, gst_timeout, trainer):
+async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, fetch_timeout, gst_timeout, trainer: Trainer):
     active_fetch_task = asyncio.create_task(active_fetch_after(fetch_timeout, committer))
     fetch_resp: WeightsResponse = await fetch_queue.drain()
     active_fetch_task.cancel()
 
     logging.info(f'Collected: {fetch_resp.request_uuid} with epoch_id={fetch_resp.r_last_epoch_id} and size of {fetch_resp.ByteSize()} bytes')
-    return await get_epoch_id_from_fetch_resp(gst_timeout, epoch_id, trainer, committer, fetch_resp)
 
-
-async def get_epoch_id_from_fetch_resp(gst_timeout, epoch_id, trainer, committer, fetch_resp):
     # LOL! Remote seems to be old.
     if epoch_id > fetch_resp.r_last_epoch_id:
         logging.warning("Remote epoch id is not bigger than current epoch id. This is not good!")
@@ -105,7 +102,7 @@ async def get_epoch_id_from_fetch_resp(gst_timeout, epoch_id, trainer, committer
     gst_event = asyncio.create_task(asyncio.sleep(gst_timeout / 1000.0))
     # aggregate weights
     logging.info("Aggregating weights...")
-    await trainer.aggregate_weights(fetch_resp.w_last)
+    trainer.aggregate_weights(fetch_resp.w_last)
 
     # # test accuracy
     # score = await trainer.evaluate()
@@ -113,7 +110,7 @@ async def get_epoch_id_from_fetch_resp(gst_timeout, epoch_id, trainer, committer
 
     # local_train
     logging.info("Local training...")
-    cur_weights = await trainer.local_train()
+    cur_weights = trainer.local_train()
 
     # # test accuracy
     # score = await trainer.evaluate()

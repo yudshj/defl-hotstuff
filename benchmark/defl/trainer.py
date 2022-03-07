@@ -19,7 +19,7 @@ class Trainer:
         self.num_byzantine = num_byzantine
         self.init_weights = self.model.get_weights()
 
-    async def aggregate_weights(self, weights: Dict[str, bytes]):
+    def aggregate_weights(self, weights: Dict[str, bytes]):
         if len(weights) == 0:
             self.model.set_weights(self.init_weights)
             logging.warning("No weights received, using initial weights!")
@@ -34,7 +34,7 @@ class Trainer:
             self.model.set_weights(w_agg)
             self.agg.clear_aggregator()
 
-    async def local_train(self) -> bytes:
+    def local_train(self) -> bytes:
         '''Return the weights of the model after local training'''
         # self.model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy'])
         self.model.fit(self.train_data[0], self.train_data[1],
@@ -49,5 +49,5 @@ class Trainer:
             payload = bytes_file.getvalue()
         return zstd.compress(payload, 9)
     
-    async def evaluate(self) -> List:
+    def evaluate(self) -> List:
         return self.model.evaluate(self.test_data[0], self.test_data[1], verbose=0)
