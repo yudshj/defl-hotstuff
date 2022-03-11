@@ -30,8 +30,6 @@ async fn handle_clients_transactions() {
         store,
         rx_consensus_to_mempool,
         tx_mempool_to_consensus,
-        Arc::new(Mutex::new(ContactsType::new())),
-        Arc::new(Mutex::new(ClientWeightsType::new())),
     );
 
     // Spawn enough mempools' listeners to acknowledge our batches.
