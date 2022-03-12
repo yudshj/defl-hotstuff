@@ -31,7 +31,7 @@ def load_data():
     train_data = (x_train, y_train)
     test_data = (x_test, y_test)
     # just for fun~
-    return train_data[:5], test_data[:5]
+    return train_data, test_data
 
 
 async def active_fetch_with_delay(sleep_time, committer):
@@ -110,7 +110,10 @@ async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, 
 
     # local_train
     logging.info("Local training...")
-    cur_weights = trainer.local_train()
+    trainer.local_train()
+    trainer.poison()
+
+    cur_weights = trainer.serialize_model()
 
     # # test accuracy
     # score = await trainer.evaluate()

@@ -1,53 +1,60 @@
-import h5py
 import io
 import logging
-import zstd
-
-import tensorflow as tf
-
 from typing import Dict, List
-from tensorflow.python.keras.saving import hdf5_format
+
+import numpy as np
+import tensorflow as tf
+from tensorflow import Tensor
+from tensorflow.keras.models import Model
+
+from defl.aggregator import AbstractAggregator
 
 
 class Trainer:
-    def __init__(self, model, train_data, test_data, local_train_epochs, aggregator, num_byzantine):
-        self.model = model
-        self.local_train_epochs = local_train_epochs
-        self.train_data = train_data
-        self.test_data = test_data
-        self.agg = aggregator
-        self.num_byzantine = num_byzantine
-        self.init_weights = self.model.get_weights()
+    def __init__(self, model: Model, train_data, test_data, local_train_epochs: int, aggregator: AbstractAggregator, num_byzantine: int):
+        self.model: Model = model
+        self.local_train_epochs: int = local_train_epochs
+        self.train_data = tf.data.Dataset.from_tensor_slices(train_data).shuffle(5000).batch(32)
+        self.test_data = tf.data.Dataset.from_tensor_slices(test_data).shuffle(5000).batch(32)
+        self.agg: AbstractAggregator = aggregator
+        self.num_byzantine: int = num_byzantine
+        self.init_weights: List[Tensor] = self.model.get_weights()
 
     def aggregate_weights(self, weights: Dict[str, bytes]):
         if len(weights) == 0:
             self.model.set_weights(self.init_weights)
             logging.warning("No weights received, using initial weights!")
         else:
-            for client_name, client_weights_h5_zstd in weights.items():
-                client_weights_h5 = zstd.decompress(client_weights_h5_zstd)
-                with io.BytesIO(client_weights_h5) as bytes_file:
-                    with h5py.File(bytes_file, 'r') as f:
-                        hdf5_format.load_weights_from_hdf5_group(f, self.model.layers)
-                self.agg.add_client_delta(self.model.get_weights())
+            for client_name, client_weights_npz in weights.items():
+                # np.savez_compressed(bytes_file, *self.model.get_weights())
+                with io.BytesIO(client_weights_npz) as bytes_file:
+                    payload = np.load(bytes_file)
+                    client_weights = list(payload[x] for x in sorted(payload.keys(), key=lambda x: int(x, 16)))
+                self.agg.add_client_delta(client_weights)
             w_agg = self.agg.aggregate(self.num_byzantine)
             self.model.set_weights(w_agg)
             self.agg.clear_aggregator()
 
-    def local_train(self) -> bytes:
+    def local_train(self):
         '''Return the weights of the model after local training'''
         # self.model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy'])
-        self.model.fit(self.train_data[0], self.train_data[1],
-                       epochs=self.local_train_epochs,
-                       verbose=1,
-                       # validation_data=self.test_data
-                       )
+        self.model.fit(
+            self.train_data,
+            epochs=self.local_train_epochs,
+            verbose=1
+        )
+    
+    def poison(self):
+        # TODO: Poisoning the weights
+        # self.model.get_weights()
+        pass
 
+    def serialize_model(self) -> bytes:
         with io.BytesIO() as bytes_file:
-            with h5py.File(bytes_file, 'w') as f:
-                hdf5_format.save_weights_to_hdf5_group(f, self.model.layers)
+            kwargs = { f"{x:x}": y for x,y in enumerate(self.model.get_weights()) }
+            np.savez_compressed(bytes_file, **kwargs)
             payload = bytes_file.getvalue()
-        return zstd.compress(payload, 9)
+        return payload
     
     def evaluate(self) -> List:
         return self.model.evaluate(self.test_data[0], self.test_data[1], verbose=0)
