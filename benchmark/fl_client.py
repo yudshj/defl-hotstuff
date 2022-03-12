@@ -34,10 +34,6 @@ def load_data():
     return train_data, test_data
 
 
-async def active_fetch_with_delay(sleep_time, committer):
-    await asyncio.sleep(sleep_time)
-
-
 async def main(params):
     # learning stuff
     train_data, test_data = load_data()
@@ -76,7 +72,7 @@ async def main(params):
 
 async def active_fetch_after(sleep_time, committer):
     await asyncio.sleep(sleep_time)
-    logging.info("PASSIVE is not done. Fetching...")
+    logging.info("PASSIVE received nothing. Fetching...")
     await committer.fetch_w_last()
 
 
@@ -113,7 +109,7 @@ async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, 
     trainer.local_train()
     trainer.poison()
 
-    cur_weights = trainer.serialize_model()
+    cur_weights = trainer.get_serialized_weights()
 
     # # test accuracy
     # score = await trainer.evaluate()
