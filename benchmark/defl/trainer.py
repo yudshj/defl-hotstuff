@@ -37,8 +37,8 @@ class Trainer:
 
         self.model: Model = model
         self.local_train_epochs: int = local_train_epochs
-        self.train_data = tf.data.Dataset.from_tensor_slices(train_data).shuffle(5000).batch(32)
-        self.test_data = tf.data.Dataset.from_tensor_slices(test_data).shuffle(5000).batch(32)
+        self.train_data = tf.data.Dataset.from_tensor_slices(train_data).shuffle(10000).batch(32)
+        self.test_data = tf.data.Dataset.from_tensor_slices(test_data).shuffle(10000).batch(32)
         self.agg: AbstractAggregator = aggregator
         self.num_byzantine: int = num_byzantine
         self.init_weights: List[Tensor] = self.model.get_weights()
@@ -58,28 +58,16 @@ class Trainer:
             self.model.set_weights(w_agg)
             self.agg.clear_aggregator()
 
-    def local_train(self, poisoner: WeightPoisoner = None):
+    def local_train(self, callbacks: List[tf.keras.callbacks.Callback]):
         """Return the weights of the model after local training"""
         # optimizer = self.model.optimizer
         # loss_fn = self.model.loss
 
-        # for epoch_id in range(self.local_train_epochs):
-        #     for step, (x, y) in enumerate(self.train_data):
-        #         with tf.GradientTape() as tape:
-        #             y_pred = self.model(x, training=True)
-        #             loss = loss_fn(y, y_pred)
-        #         grads = tape.gradient(loss, self.model.trainable_weights)
-        #         if poisoner is not None:
-        #             grads = poisoner.poison(grads)
-        #         optimizer.apply_gradients(zip(grads, self.model.trainable_weights))
-        if poisoner is not None:
-            old_weights = self.model.get_weights()
-            self.model.fit(self.train_data, epochs=self.local_train_epochs, verbose=1)
-            new_weights = self.model.get_weights()
-            gradient = poisoner([np.subtract(new_w, old_w) for new_w, old_w in zip(new_weights, old_weights)])
-            self.model.set_weights([np.add(g, old_w) for g, old_w in zip(gradient, old_weights)])
-        else:
-            self.model.fit(self.train_data, epochs=self.local_train_epochs, verbose=1)
+        self.model.fit(self.train_data,
+                       epochs=self.local_train_epochs,
+                       verbose=0,
+                       callbacks=callbacks
+                       )
 
     def evaluate(self) -> List:
-        return self.model.evaluate(self.test_data[0], self.test_data[1], verbose=0)
+        return self.model.evaluate(self.test_data, verbose=0)

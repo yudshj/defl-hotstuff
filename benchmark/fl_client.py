@@ -1,5 +1,4 @@
 #!/Users/maghsk/miniforge3/envs/tf/bin/python3
-# protoc -I=proto/src/ --python_out=benchmark/proto/ --mypy_out=benchmark/proto/ defl.proto
 import argparse
 import asyncio
 import uuid
@@ -18,36 +17,45 @@ LOCAL_TRAIN_EPOCHS = 1
 INIT_MODEL_PATH = 'defl/data/init_model.h5'
 
 
-def load_data():
+def load_data(do_label_flip: bool):
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
-    x_train = x_train[:1000]
-    y_train = y_train[:1000]
-    x_train = x_train.astype('float32')
-    x_test = x_test.astype('float32')
-    x_train /= 255
-    x_test /= 255
+
+    # just for testing
+    x_train = x_train[:2000]
+    y_train = y_train[:2000]
+
+    # normalize to 0..1 inclusive
+    x_train = x_train.astype('float32') / 255.
+    x_test = x_test.astype('float32') / 255.
+
+    # do label-flip poisoning
+    if do_label_flip:
+        y_train = np.max(y_train) + np.min(y_train) - y_train
+
     y_train = tf.keras.utils.to_categorical(y_train, 10)
     y_test = tf.keras.utils.to_categorical(y_test, 10)
     train_data = (x_train, y_train)
     test_data = (x_test, y_test)
-    # just for fun~
     return train_data, test_data
 
 
 async def main(params):
+    callbacks = []
+    label_flip = False
     if params.attack == 'none':
-        poisoner = None
+        pass
     elif params.attack == 'gaussian':
-        poisoner = GaussianNoiseWeightPoisoner(1 / 1000)
+        callbacks.append(GaussianNoiseWeightPoisoner(1 / 1000))
     elif params.attack == 'sign':
-        poisoner = SignFlipWeightPoisoner(-4)
+        callbacks.append(SignFlipWeightPoisoner(-4))
     elif params.attack == 'label':
-        raise NotImplementedError("Label-flip poisoning is not implemented yet.")
+        label_flip = True
+        # raise NotImplementedError("Label-flip poisoning is not implemented yet.")
     else:
         raise ValueError("Unknown poisoning method.")
 
     # learning stuff
-    train_data, test_data = load_data()
+    train_data, test_data = load_data(label_flip)
     model = tf.keras.models.load_model(INIT_MODEL_PATH)
     model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy'])
     trainer = Trainer(
@@ -62,7 +70,8 @@ async def main(params):
     # committer stuff
     client_name = str(uuid.uuid4())
     fetch_queue = ObsidoResponseQueue()
-    committer = IpcCommitter(client_name, params.host, params.port, params.obsido_port, fetch_queue)
+    host, port = params.host.split(':')
+    committer = IpcCommitter(client_name, host, int(port), params.obsido_port, fetch_queue)
     await committer.committer_bootstrap()
 
     # defl stuff
@@ -73,12 +82,12 @@ async def main(params):
 
     logging.info("[INIT LOOP]")
     logging.info("Current epoch id is %d.", epoch_id)
-    epoch_id = await client_routine(committer, epoch_id, fetch_queue, 0, gst_timeout, trainer, poisoner)
+    epoch_id = await client_routine(committer, epoch_id, fetch_queue, 0, gst_timeout, trainer, callbacks)
 
     for i in range(1, 100):
         logging.info("[LOOP %d]", i)
         logging.info("Current epoch id is %d. Waiting PASSIVE %.0f seconds...", epoch_id, fetch_timeout)
-        epoch_id = await client_routine(committer, epoch_id, fetch_queue, fetch_timeout, gst_timeout, trainer, poisoner)
+        epoch_id = await client_routine(committer, epoch_id, fetch_queue, fetch_timeout, gst_timeout, trainer, callbacks)
 
 
 async def active_fetch_after(sleep_time, committer):
@@ -87,7 +96,7 @@ async def active_fetch_after(sleep_time, committer):
     await committer.fetch_w_last()
 
 
-async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, fetch_timeout, gst_timeout, trainer: Trainer, poisoner: WeightPoisoner):
+async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, fetch_timeout, gst_timeout, trainer: Trainer, callbacks: List[tf.keras.callbacks.Callback]):
     active_fetch_task = asyncio.create_task(active_fetch_after(fetch_timeout, committer))
     fetch_resp: WeightsResponse = await fetch_queue.drain()
     active_fetch_task.cancel()
@@ -111,13 +120,13 @@ async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, 
     logging.info("Aggregating weights...")
     trainer.aggregate_weights(fetch_resp.w_last)
 
-    # # test accuracy
-    # score = await trainer.evaluate()
-    # logging.info('[AGGREGATED] Test loss: {0[0]}, test accuracy: {0[1]}'.format(score))
+    # test accuracy
+    score = trainer.evaluate()
+    logging.info('[AGGREGATED] Test loss: {0[0]}, test accuracy: {0[1]}'.format(score))
 
     # local_train
     logging.info("Local training...")
-    trainer.local_train(poisoner=poisoner)
+    trainer.local_train(callbacks=callbacks)
 
     cur_weights = trainer.get_serialized_weights()
 
@@ -155,9 +164,8 @@ if __name__ == '__main__':
     main_logger.setLevel(logging.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('host', help='host', type=str)
-    parser.add_argument('port', help='port', type=int)
-    parser.add_argument('obsido_port', help='obsido_port', type=int)
+    parser.add_argument('host', help='<host:port>', type=str)
+    parser.add_argument('--obsido_port', help='obsido port for passive fetch', type=int)
     parser.add_argument('--attack', help='Attack method', choices=['none', 'gaussian', 'sign', 'label'], default='none')
 
     # 3 seconds
