@@ -2,7 +2,6 @@
 # protoc -I=proto/src/ --python_out=benchmark/proto/ --mypy_out=benchmark/proto/ defl.proto
 import argparse
 import asyncio
-import logging
 import uuid
 
 import tensorflow as tf
@@ -11,6 +10,7 @@ from defl.aggregator import MultiKrumAggregator
 from defl.committer import IpcCommitter
 from defl.committer.ipc_committer import ObsidoResponseQueue
 from defl.trainer import Trainer
+from defl.weightpoisoner import *
 from proto.defl_pb2 import WeightsResponse, Response
 
 NUM_BYZANTINE = 1
@@ -35,6 +35,17 @@ def load_data():
 
 
 async def main(params):
+    if params.attack == 'none':
+        poisoner = None
+    elif params.attack == 'gaussian':
+        poisoner = GaussianNoiseWeightPoisoner(1 / 1000)
+    elif params.attack == 'sign':
+        poisoner = SignFlipWeightPoisoner(-4)
+    elif params.attack == 'label':
+        raise NotImplementedError("Label-flip poisoning is not implemented yet.")
+    else:
+        raise ValueError("Unknown poisoning method.")
+
     # learning stuff
     train_data, test_data = load_data()
     model = tf.keras.models.load_model(INIT_MODEL_PATH)
@@ -62,12 +73,12 @@ async def main(params):
 
     logging.info("[INIT LOOP]")
     logging.info("Current epoch id is %d.", epoch_id)
-    epoch_id = await client_routine(committer, epoch_id, fetch_queue, 0, gst_timeout, trainer)
+    epoch_id = await client_routine(committer, epoch_id, fetch_queue, 0, gst_timeout, trainer, poisoner)
 
     for i in range(1, 100):
         logging.info("[LOOP %d]", i)
         logging.info("Current epoch id is %d. Waiting PASSIVE %.0f seconds...", epoch_id, fetch_timeout)
-        epoch_id = await client_routine(committer, epoch_id, fetch_queue, fetch_timeout, gst_timeout, trainer)
+        epoch_id = await client_routine(committer, epoch_id, fetch_queue, fetch_timeout, gst_timeout, trainer, poisoner)
 
 
 async def active_fetch_after(sleep_time, committer):
@@ -76,7 +87,7 @@ async def active_fetch_after(sleep_time, committer):
     await committer.fetch_w_last()
 
 
-async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, fetch_timeout, gst_timeout, trainer: Trainer):
+async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, fetch_timeout, gst_timeout, trainer: Trainer, poisoner: WeightPoisoner):
     active_fetch_task = asyncio.create_task(active_fetch_after(fetch_timeout, committer))
     fetch_resp: WeightsResponse = await fetch_queue.drain()
     active_fetch_task.cancel()
@@ -106,8 +117,7 @@ async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, 
 
     # local_train
     logging.info("Local training...")
-    trainer.local_train()
-    trainer.poison()
+    trainer.local_train(poisoner=poisoner)
 
     cur_weights = trainer.get_serialized_weights()
 
@@ -146,8 +156,9 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('host', help='host', type=str)
-    parser.add_argument('port', help='host', type=int)
-    parser.add_argument('obsido_port', help='host', type=int)
+    parser.add_argument('port', help='port', type=int)
+    parser.add_argument('obsido_port', help='obsido_port', type=int)
+    parser.add_argument('--attack', help='Attack method', choices=['none', 'gaussian', 'sign', 'label'], default='none')
 
     # 3 seconds
     parser.add_argument('--gst', default='3000', help='train time in milliseconds', type=int)

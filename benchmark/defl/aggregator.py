@@ -1,4 +1,5 @@
 import abc
+import logging
 from typing import List
 
 import numpy as np
@@ -90,7 +91,9 @@ class MultiKrumAggregator(AbstractAggregator):
                 distances[j, i] = distances[i, j]
 
         distances.sort(axis=0)
-        best_clients = np.argsort(distances[:k + 1].sum(axis=0))[:min(self.m, num_clients)]
+        client_score = distances[:k + 1].sum(axis=0)
+        logging.info(f"Client scores: {client_score.tolist()}")
+        best_clients = np.argsort(client_score)[:min(self.m, num_clients)]
         delta = []
         for layer in self.layers_weight:
             delta.append(np.mean(np.stack(layer)[best_clients], axis=0))

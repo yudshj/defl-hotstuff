@@ -8,6 +8,7 @@ from tensorflow import Tensor
 from tensorflow.keras.models import Model
 
 from defl.aggregator import AbstractAggregator
+from defl.weightpoisoner import WeightPoisoner
 
 
 def _serialize_w_list(weights: List[np.ndarray]) -> bytes:
@@ -57,18 +58,28 @@ class Trainer:
             self.model.set_weights(w_agg)
             self.agg.clear_aggregator()
 
-    def local_train(self):
+    def local_train(self, poisoner: WeightPoisoner = None):
         """Return the weights of the model after local training"""
-        self.model.fit(
-            self.train_data,
-            epochs=self.local_train_epochs,
-            verbose=1
-        )
-    
-    def poison(self):
-        # TODO: Poisoning the weights
-        # self.model.get_weights()
-        pass
-    
+        # optimizer = self.model.optimizer
+        # loss_fn = self.model.loss
+
+        # for epoch_id in range(self.local_train_epochs):
+        #     for step, (x, y) in enumerate(self.train_data):
+        #         with tf.GradientTape() as tape:
+        #             y_pred = self.model(x, training=True)
+        #             loss = loss_fn(y, y_pred)
+        #         grads = tape.gradient(loss, self.model.trainable_weights)
+        #         if poisoner is not None:
+        #             grads = poisoner.poison(grads)
+        #         optimizer.apply_gradients(zip(grads, self.model.trainable_weights))
+        if poisoner is not None:
+            old_weights = self.model.get_weights()
+            self.model.fit(self.train_data, epochs=self.local_train_epochs, verbose=1)
+            new_weights = self.model.get_weights()
+            gradient = poisoner([np.subtract(new_w, old_w) for new_w, old_w in zip(new_weights, old_weights)])
+            self.model.set_weights([np.add(g, old_w) for g, old_w in zip(gradient, old_weights)])
+        else:
+            self.model.fit(self.train_data, epochs=self.local_train_epochs, verbose=1)
+
     def evaluate(self) -> List:
         return self.model.evaluate(self.test_data[0], self.test_data[1], verbose=0)
