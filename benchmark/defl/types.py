@@ -14,7 +14,8 @@ ClientConfig = typing.TypedDict('ClientConfig', {
     'tfds_config': TFDSConfig,
     'local_train_epochs': int,
     # ----------------------------------------- #
-    'name': str,
+    'client_name': str,
+    'server_name': str,
     'obsido_port': int,
     'host': str,
     'init_model_path': str,

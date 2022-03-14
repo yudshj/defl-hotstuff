@@ -5,8 +5,10 @@ import os
 import shutil
 import subprocess
 import typing
+import uuid
 from logging import info, warning
 from time import sleep
+
 from benchmark.defl.types import *
 
 PYTHON_PATH = os.path.abspath(shutil.which('python3'))
@@ -51,9 +53,20 @@ if __name__ == '__main__':
 
     num_nodes = len(client_config_list)
 
+
+    if os.path.exists('benchmark/node'):
+        info("Found node binary in benchmark/node")
+    else:
+        info("Creating softlink to node binary...")
+        p = subprocess.run(
+            ['ln', '-s', '../target/release/node', 'benchmark/node'],
+            check=True
+        )
+        info("Created softlink to node binary")
+
     info("Generating configs for server nodes...")
     p = subprocess.run(
-        ["./gen_config.py", "--nodes", str(num_nodes), "--base_port", str(committee_base_port),
+        [PYTHON_PATH, "gen_config.py", "--nodes", str(num_nodes), "--base_port", str(committee_base_port),
          "--node_params_json_path", node_params_json_path],
         capture_output=True,
         cwd='./benchmark',
@@ -68,16 +81,26 @@ if __name__ == '__main__':
         assert('batch_size' in cur_client_config)
         assert('tfds_config' in cur_client_config)
 
-        if 'name' not in cur_client_config:
-            cur_client_config['name'] = "client-" + str(id)
+        if 'client_name' not in cur_client_config:
+            cur_client_config['client_name'] = "client-" + str(id)
+        cur_client_config['client_name'] += '-' + str(uuid.uuid4())[:8]
+
+        if 'server_name' not in cur_client_config:
+            cur_client_config['server_name'] = "node-" + str(id)
+        cur_client_config['server_name'] += '-' + str(uuid.uuid4())[:8]
+
         if 'obsido_port' not in cur_client_config:
             cur_client_config['obsido_port'] = obsido_base_port + id
+
         if 'host' not in cur_client_config:
             cur_client_config['host'] = committee_front[id]
+
         if 'init_model_path' not in cur_client_config:
             cur_client_config['init_model_path'] = init_model_path
+
         if 'fetch' not in cur_client_config:
             cur_client_config['fetch'] = 20_000
+
         if 'gst' not in cur_client_config:
             cur_client_config['gst'] = 6_000
 
@@ -104,14 +127,14 @@ if __name__ == '__main__':
 
     info("Generating configs for client nodes...")
     for id, client_config in enumerate(client_config_list):
-        file_name = '.{}.json'.format(client_config['name'])
+        file_name = '.{}.json'.format(client_config['client_name'])
         path = os.path.join('benchmark', file_name)
         path = os.path.abspath(path)
         with open(path, 'w') as f:
             json.dump(client_config, f)
         
-        client_sessions.append((client_config['name'], gen_client_cmd(PYTHON_PATH, client_config['name'], path), './benchmark'))
-        server_sessions.append((f'node-{id}', gen_server_cmd(NODE_PATH, id, client_config['obsido_port']), './benchmark'))
+        client_sessions.append((client_config['client_name'], gen_client_cmd(PYTHON_PATH, client_config['client_name'], path), './benchmark'))
+        server_sessions.append((client_config['server_name'], gen_server_cmd(NODE_PATH, id, client_config['obsido_port']), './benchmark'))
 
     all_sessions = client_sessions + server_sessions
 
@@ -122,7 +145,7 @@ if __name__ == '__main__':
     info("Starting all sessions...")
     for session_name, session_cmd, session_cwd in all_sessions:
         subprocess.run(
-            ['tmux', 'new-session', '-d', '-s', f'defl_{session_name}', session_cmd],
+            ['tmux', 'new-session', '-d', '-s', session_name, session_cmd],
             cwd=session_cwd
         )
     info("Started all sessions")
@@ -141,5 +164,9 @@ if __name__ == '__main__':
         pass
 
     info("Killing all sessions...")
-    subprocess.run(['tmux', 'kill-server'])
+    for session_name, session_cmd, session_cwd in all_sessions:
+        subprocess.run(
+            ['tmux', 'kill-session', '-t', session_name],
+            cwd=session_cwd
+        )
     info("Killed all sessions.")
