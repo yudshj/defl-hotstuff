@@ -1,0 +1,13 @@
+{
+    "consensus": {
+        "timeout_delay": 1000,
+        "sync_retry_delay": 10000
+    },
+    "mempool": {
+        "gc_depth": 50,
+        "sync_retry_delay": 5000,
+        "sync_retry_nodes": 3,
+        "batch_size": 15000,
+        "max_batch_delay": 100
+    }
+}

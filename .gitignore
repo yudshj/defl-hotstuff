@@ -5,6 +5,9 @@ db_*
 *.json
 *.log
 
+!/defl_config.json
+!/node_params.json
+
 benchmark/client
 benchmark/node
 

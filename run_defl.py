@@ -17,16 +17,18 @@ ClientConfig = typing.TypedDict('NodeConfig', {
     'name': str,
     'obsido_port': int,
     'host': str,
+    'init_model_path': str,
 })
 
 
 def gen_client_cmd(python_path: str, client_config: ClientConfig):
-    return '{} fl_client.py {} --attack {} --gst {} --obsido_port {} 2> logs/{}.log'.format(
+    return '{} client.py {} --attack {} --gst {} --obsido_port {} --init_model_path {} 2> logs/{}.log'.format(
         python_path,
         client_config['host'],
         client_config['attack'],
         client_config['gst'],
         client_config['obsido_port'],
+        client_config['init_model_path'],
         client_config['name']
     )
 
@@ -55,11 +57,11 @@ if __name__ == '__main__':
     committee_base_port = conf["committee_base_port"]
     obsido_base_port = conf["obsido_base_port"]
     client_config: typing.List[ClientConfig] = conf["client_config"]
-    node_params_path = conf["node_params_path"]
+
+    node_params_json_path = os.path.abspath(conf["node_params_path"])
+    init_model_path = os.path.abspath(conf["init_model_path"])
 
     num_nodes = len(client_config)
-
-    node_params_json_path = os.path.abspath(node_params_path)
 
     info("Generating configs for server nodes...")
     p = subprocess.run(
@@ -77,6 +79,7 @@ if __name__ == '__main__':
         client_config[id]['name'] = "client-" + str(id)
         client_config[id]['obsido_port'] = obsido_base_port + id
         client_config[id]['host'] = committee_front[id]
+        client_config[id]['init_model_path'] = init_model_path
 
     print('  ', "Client configs:")
     for client in client_config:

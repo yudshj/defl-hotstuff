@@ -1,4 +1,3 @@
-#!/Users/maghsk/miniforge3/envs/tf/bin/python3
 import argparse
 import asyncio
 import uuid
@@ -14,7 +13,6 @@ from proto.defl_pb2 import WeightsResponse, Response
 
 NUM_BYZANTINE = 1
 LOCAL_TRAIN_EPOCHS = 1
-INIT_MODEL_PATH = 'defl/data/init_model.h5'
 
 
 def load_data(do_label_flip: bool):
@@ -25,8 +23,8 @@ def load_data(do_label_flip: bool):
     y_train = y_train[:2000]
 
     # normalize to 0..1 inclusive
-    x_train = x_train.astype('float32') / 255.
-    x_test = x_test.astype('float32') / 255.
+    x_train = x_train.astype(np.float32) / 255.
+    x_test = x_test.astype(np.float32) / 255.
 
     # do label-flip poisoning
     if do_label_flip:
@@ -56,7 +54,7 @@ async def main(params):
 
     # learning stuff
     train_data, test_data = load_data(label_flip)
-    model = tf.keras.models.load_model(INIT_MODEL_PATH)
+    model = tf.keras.models.load_model(args.init_model_path)
     model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy'])
     trainer = Trainer(
         model,
@@ -155,6 +153,8 @@ async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, 
 
 
 if __name__ == '__main__':
+    INIT_MODEL_PATH = 'defl/data/init_model.h5'
+
     formatter = logging.Formatter(r"[%(asctime)s - %(levelname)s - %(funcName)s]: %(message)s")
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
@@ -167,6 +167,9 @@ if __name__ == '__main__':
     parser.add_argument('host', help='<host:port>', type=str)
     parser.add_argument('--obsido_port', help='obsido port for passive fetch', type=int)
     parser.add_argument('--attack', help='Attack method', choices=['none', 'gaussian', 'sign', 'label'], default='none')
+
+    # init model
+    parser.add_argument('--init_model_path', help='Initial model path', type=str, default=INIT_MODEL_PATH)
 
     # 3 seconds
     parser.add_argument('--gst', default='3000', help='train time in milliseconds', type=int)

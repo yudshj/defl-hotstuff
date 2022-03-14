@@ -1,0 +1,24 @@
+{
+    "init_model_path": "./benchmark/defl/data/init_model.h5",
+    "committee_base_port": 9000,
+    "obsido_base_port": 19000,
+    "client_config": [
+        {
+            "attack": "none",
+            "gst": 5000
+        },
+        {
+            "attack": "none",
+            "gst": 5000
+        },
+        {
+            "attack": "none",
+            "gst": 5000
+        },
+        {
+            "attack": "gaussian",
+            "gst": 5000
+        }
+    ],
+    "node_params_path": "./node_params.json"
+}
