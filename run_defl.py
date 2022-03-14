@@ -83,11 +83,11 @@ if __name__ == '__main__':
 
         if 'client_name' not in cur_client_config:
             cur_client_config['client_name'] = "client-" + str(id)
-        cur_client_config['client_name'] += '-' + str(uuid.uuid4())[:8]
+        # cur_client_config['client_name'] += '-' + str(uuid.uuid4())[:8]
 
         if 'server_name' not in cur_client_config:
             cur_client_config['server_name'] = "node-" + str(id)
-        cur_client_config['server_name'] += '-' + str(uuid.uuid4())[:8]
+        # cur_client_config['server_name'] += '-' + str(uuid.uuid4())[:8]
 
         if 'obsido_port' not in cur_client_config:
             cur_client_config['obsido_port'] = obsido_base_port + id
@@ -131,7 +131,7 @@ if __name__ == '__main__':
         path = os.path.join('benchmark', file_name)
         path = os.path.abspath(path)
         with open(path, 'w') as f:
-            json.dump(client_config, f)
+            json.dump(client_config, f, indent=4, sort_keys=True)
         
         client_sessions.append((client_config['client_name'], gen_client_cmd(PYTHON_PATH, client_config['client_name'], path), './benchmark'))
         server_sessions.append((client_config['server_name'], gen_server_cmd(NODE_PATH, id, client_config['obsido_port']), './benchmark'))
