@@ -37,8 +37,8 @@ class Trainer:
 
         self.model: Model = model
         self.local_train_epochs: int = local_train_epochs
-        self.train_data = tf.data.Dataset.from_tensor_slices(train_data).shuffle(10000).batch(32)
-        self.test_data = tf.data.Dataset.from_tensor_slices(test_data).shuffle(10000).batch(32)
+        self.train_data = train_data
+        self.test_data = test_data
         self.agg: AbstractAggregator = aggregator
         self.num_byzantine: int = num_byzantine
         self.init_weights: List[Tensor] = self.model.get_weights()

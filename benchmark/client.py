@@ -1,8 +1,11 @@
 import argparse
 import asyncio
 import uuid
+import json
 
 import tensorflow as tf
+import tensorflow_datasets as tfds
+from defl.types import *
 
 from defl.aggregator import MultiKrumAggregator
 from defl.committer import IpcCommitter
@@ -12,55 +15,53 @@ from defl.weightpoisoner import *
 from proto.defl_pb2 import WeightsResponse, Response
 
 NUM_BYZANTINE = 1
-LOCAL_TRAIN_EPOCHS = 1
+
+def normalize_img(image, label):
+  """Normalizes images: `uint8` -> `float32`."""
+  return tf.cast(image, tf.float32) / 255., tf.one_hot(label, depth=10)
+
+def flip_label(image, label):
+    return image, 9 - label
 
 
-def load_data(do_label_flip: bool):
-    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
-
-    # just for testing
-    x_train = x_train[:2000]
-    y_train = y_train[:2000]
-
-    # normalize to 0..1 inclusive
-    x_train = x_train.astype(np.float32) / 255.
-    x_test = x_test.astype(np.float32) / 255.
-
-    # do label-flip poisoning
+def load_data(tfds_config: TFDSConfig, batch_size: int, do_label_flip: bool):
+    ds_name = tfds_config['ds_name']
+    train_ds = tfds.load(ds_name, **tfds_config['fit_args'])
+    test_ds = tfds.load(ds_name, **tfds_config['evaluate_args'])
+    
     if do_label_flip:
-        y_train = np.max(y_train) + np.min(y_train) - y_train
+        train_ds = train_ds.map(flip_label)
 
-    y_train = tf.keras.utils.to_categorical(y_train, 10)
-    y_test = tf.keras.utils.to_categorical(y_test, 10)
-    train_data = (x_train, y_train)
-    test_data = (x_test, y_test)
-    return train_data, test_data
+    train_ds = train_ds.map(normalize_img).batch(batch_size).cache().prefetch(tf.data.AUTOTUNE)
+    test_ds = test_ds.map(normalize_img).batch(batch_size).cache().prefetch(tf.data.AUTOTUNE)
+
+    return train_ds, test_ds
 
 
-async def main(params):
+async def main(params: ClientConfig):
     callbacks = []
     label_flip = False
-    if params.attack == 'none':
+    if params['attack'] == 'none':
         pass
-    elif params.attack == 'gaussian':
+    elif params['attack'] == 'gaussian':
         callbacks.append(GaussianNoiseWeightPoisoner(1 / 1000))
-    elif params.attack == 'sign':
-        callbacks.append(SignFlipWeightPoisoner(-4))
-    elif params.attack == 'label':
+    elif params['attack'] == 'sign':
+        callbacks.append(SignFlipWeightPoisoner(-1))
+    elif params['attack'] == 'label':
         label_flip = True
         # raise NotImplementedError("Label-flip poisoning is not implemented yet.")
     else:
         raise ValueError("Unknown poisoning method.")
 
     # learning stuff
-    train_data, test_data = load_data(label_flip)
-    model = tf.keras.models.load_model(args.init_model_path)
+    train_data, test_data = load_data(params['tfds_config'], params['batch_size'], label_flip)
+    model = tf.keras.models.load_model(params['init_model_path'])
     model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy'])
     trainer = Trainer(
         model,
         train_data,
         test_data,
-        LOCAL_TRAIN_EPOCHS,
+        params['local_train_epochs'],
         MultiKrumAggregator(2),  # KrumAggregator(),
         NUM_BYZANTINE,
     )
@@ -68,15 +69,15 @@ async def main(params):
     # committer stuff
     client_name = str(uuid.uuid4())
     fetch_queue = ObsidoResponseQueue()
-    host, port = params.host.split(':')
-    committer = IpcCommitter(client_name, host, int(port), params.obsido_port, fetch_queue)
+    host, port = params['host'].split(':')
+    committer = IpcCommitter(client_name, host, int(port), params['obsido_port'], fetch_queue)
     await committer.committer_bootstrap()
 
     # defl stuff
     epoch_id = -1
 
-    fetch_timeout = params.fetch / 1000.0
-    gst_timeout = params.gst / 1000.0
+    fetch_timeout = params['fetch'] / 1000.0
+    gst_timeout = params['gst'] / 1000.0
 
     logging.info("[INIT LOOP]")
     logging.info("Current epoch id is %d.", epoch_id)
@@ -164,19 +165,10 @@ if __name__ == '__main__':
     main_logger.setLevel(logging.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('host', help='<host:port>', type=str)
-    parser.add_argument('--obsido_port', help='obsido port for passive fetch', type=int)
-    parser.add_argument('--attack', help='Attack method', choices=['none', 'gaussian', 'sign', 'label'], default='none')
-
-    # init model
-    parser.add_argument('--init_model_path', help='Initial model path', type=str, default=INIT_MODEL_PATH)
-
-    # 3 seconds
-    parser.add_argument('--gst', default='3000', help='train time in milliseconds', type=int)
-
-    # 20 seconds
-    parser.add_argument('--fetch', default='20000', help='train time in milliseconds', type=int)
-
+    parser.add_argument('config', type=str, help='Path to config file.')
     args = parser.parse_args()
 
-    asyncio.run(main(args))
+    with open(args.config, 'r') as f:
+        params: ClientConfig = json.load(f)
+
+    asyncio.run(main(params))

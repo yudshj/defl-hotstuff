@@ -5,19 +5,71 @@
     "client_config": [
         {
             "attack": "none",
-            "gst": 5000
+            "batch_size": 32,
+            "local_train_epochs": 1,
+            "tfds_config": {
+                "ds_name": "cifar10",
+                "fit_args": {
+                    "split": "train[0%:25%]",
+                    "shuffle_files": true,
+                    "as_supervised": true
+                },
+                "evaluate_args": {
+                    "split": "test",
+                    "as_supervised": true
+                }
+            }
         },
         {
             "attack": "none",
-            "gst": 5000
+            "batch_size": 32,
+            "local_train_epochs": 1,
+            "tfds_config": {
+                "ds_name": "cifar10",
+                "fit_args": {
+                    "split": "train[25%:50%]",
+                    "shuffle_files": true,
+                    "as_supervised": true
+                },
+                "evaluate_args": {
+                    "split": "test",
+                    "as_supervised": true
+                }
+            }
         },
         {
             "attack": "none",
-            "gst": 5000
+            "batch_size": 32,
+            "local_train_epochs": 1,
+            "tfds_config": {
+                "ds_name": "cifar10",
+                "fit_args": {
+                    "split": "train[50%:75%]",
+                    "shuffle_files": true,
+                    "as_supervised": true
+                },
+                "evaluate_args": {
+                    "split": "test",
+                    "as_supervised": true
+                }
+            }
         },
         {
             "attack": "gaussian",
-            "gst": 5000
+            "batch_size": 32,
+            "local_train_epochs": 1,
+            "tfds_config": {
+                "ds_name": "cifar10",
+                "fit_args": {
+                    "split": "train[75%:100%]",
+                    "shuffle_files": true,
+                    "as_supervised": true
+                },
+                "evaluate_args": {
+                    "split": "test",
+                    "as_supervised": true
+                }
+            }
         }
     ],
     "node_params_path": "./node_params.json"
