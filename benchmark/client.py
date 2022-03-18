@@ -1,18 +1,18 @@
 import argparse
 import asyncio
-import uuid
 import json
+import uuid
 
 import tensorflow as tf
 import tensorflow_datasets as tfds
-from defl.types import *
+from .proto.defl_pb2 import Response, WeightsResponse
 
 from defl.aggregator import MultiKrumAggregator
 from defl.committer import IpcCommitter
 from defl.committer.ipc_committer import ObsidoResponseQueue
 from defl.trainer import Trainer
+from defl.types import *
 from defl.weightpoisoner import *
-from proto.defl_pb2 import WeightsResponse, Response
 
 NUM_BYZANTINE = 1
 
