@@ -7,7 +7,7 @@
         {
             "attack": "none",
             "batch_size": 32,
-            "local_train_epochs": 1,
+            "local_train_steps": 500,
             "data_config": {
                 "x_train": "./benchmark/defl/data/cifar10_x_train.npy",
                 "y_train": "./benchmark/defl/data/cifar10_y_train.npy",
@@ -20,7 +20,7 @@
         {
             "attack": "none",
             "batch_size": 32,
-            "local_train_epochs": 1,
+            "local_train_steps": 500,
             "data_config": {
                 "x_train": "./benchmark/defl/data/cifar10_x_train.npy",
                 "y_train": "./benchmark/defl/data/cifar10_y_train.npy",
@@ -33,7 +33,7 @@
         {
             "attack": "none",
             "batch_size": 32,
-            "local_train_epochs": 1,
+            "local_train_steps": 500,
             "data_config": {
                 "x_train": "./benchmark/defl/data/cifar10_x_train.npy",
                 "y_train": "./benchmark/defl/data/cifar10_y_train.npy",
@@ -46,7 +46,7 @@
         {
             "attack": "gaussian",
             "batch_size": 32,
-            "local_train_epochs": 1,
+            "local_train_steps": 500,
             "data_config": {
                 "x_train": "./benchmark/defl/data/cifar10_x_train.npy",
                 "y_train": "./benchmark/defl/data/cifar10_y_train.npy",

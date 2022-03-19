@@ -13,7 +13,7 @@ ClientConfig = typing.TypedDict('ClientConfig', {
     'attack': str,
     'batch_size': int,
     'data_config': DataConfig,
-    'local_train_epochs': int,
+    'local_train_steps': int,
 
     # ----------------------------------------- #
     'task': str,

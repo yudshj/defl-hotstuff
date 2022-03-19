@@ -80,7 +80,7 @@ if __name__ == '__main__':
         assert ('attack' in cur_client_config)
         assert ('batch_size' in cur_client_config)
         assert ('data_config' in cur_client_config)
-        assert ('local_train_epochs' in cur_client_config)
+        assert ('local_train_steps' in cur_client_config)
 
         data_config = cur_client_config['data_config']
         if data_config['x_train']:
@@ -120,7 +120,7 @@ if __name__ == '__main__':
             cur_client_config['fetch'] = 20_000
 
         if 'gst' not in cur_client_config:
-            cur_client_config['gst'] = 6_000
+            cur_client_config['gst'] = 25_000
 
     info("Compiling protobuf code...")
     p = subprocess.run(

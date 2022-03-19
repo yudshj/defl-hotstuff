@@ -5,10 +5,11 @@ from typing import Dict, List
 import numpy as np
 import tensorflow as tf
 from tensorflow import Tensor
-from tensorflow.keras.models import Model
 
 from defl.aggregator import AbstractAggregator
-from defl.weightpoisoner import WeightPoisoner
+
+
+# from defl.weightpoisoner import WeightPoisoner
 
 
 def _serialize_w_list(weights: List[np.ndarray]) -> bytes:
@@ -28,15 +29,15 @@ def _deserialize_w_list(client_weights_npz: bytes) -> List[np.ndarray]:
 
 class Trainer:
     def __init__(self,
-                 model: Model,
+                 model: tf.keras.Model,
                  train_data,
                  test_data,
-                 local_train_epochs: int,
+                 local_train_steps: int,
                  aggregator: AbstractAggregator,
                  num_byzantine: int):
 
-        self.model: Model = model
-        self.local_train_epochs: int = local_train_epochs
+        self.model: tf.keras.Model = model
+        self.local_train_steps: int = local_train_steps
         self.train_data = train_data
         self.test_data = test_data
         self.agg: AbstractAggregator = aggregator
@@ -64,10 +65,11 @@ class Trainer:
         # loss_fn = self.model.loss
 
         self.model.fit(self.train_data,
-                       epochs=self.local_train_epochs,
-                       verbose=0,
+                       steps_per_epoch=self.local_train_steps,
+                       epochs=1,
+                       verbose=1,
                        callbacks=callbacks
                        )
 
     def evaluate(self) -> List:
-        return self.model.evaluate(self.test_data, verbose=0)
+        return self.model.evaluate(self.test_data, verbose=1)

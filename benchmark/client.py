@@ -3,10 +3,10 @@ import asyncio
 import json
 import uuid
 
-from cifar10_dataloader import load_data
 from defl.aggregator import MultiKrumAggregator
 from defl.committer import IpcCommitter
 from defl.committer.ipc_committer import ObsidoResponseQueue
+from defl.dataloader import DataLoader, Cifar10DataLoader
 from defl.trainer import Trainer
 from defl.types import *
 from defl.weightpoisoner import *
@@ -16,6 +16,11 @@ NUM_BYZANTINE = 1
 
 
 async def main(params: ClientConfig):
+    if params['task'] == 'cifar10':
+        dataloader = Cifar10DataLoader()
+    else:
+        dataloader = DataLoader()
+
     callbacks = []
     label_flip = False
     if params['attack'] == 'none':
@@ -31,14 +36,13 @@ async def main(params: ClientConfig):
         raise ValueError("Unknown poisoning method.")
 
     # learning stuff
-    train_data, test_data = load_data(params['data_config'], params['batch_size'], label_flip)
-    model = tf.keras.models.load_model(params['init_model_path'])
-    model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy'])
+    train_data, test_data = dataloader.load_data(params['data_config'], params['batch_size'], label_flip)
+    model = dataloader.give_me_compiled_model(params['init_model_path'])
     trainer = Trainer(
         model,
         train_data,
         test_data,
-        params['local_train_epochs'],
+        params['local_train_steps'],
         MultiKrumAggregator(2),  # KrumAggregator(),
         NUM_BYZANTINE,
     )
