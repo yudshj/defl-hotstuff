@@ -1,4 +1,5 @@
 import argparse
+import copy
 import json
 import logging
 import os
@@ -53,7 +54,6 @@ if __name__ == '__main__':
 
     num_nodes = len(client_config_list)
 
-
     if os.path.exists('benchmark/node'):
         info("Found node binary in benchmark/node")
     else:
@@ -77,9 +77,27 @@ if __name__ == '__main__':
     committee_front = json.loads(p.stdout)
 
     for id, cur_client_config in enumerate(client_config_list):
-        assert('attack' in cur_client_config)
-        assert('batch_size' in cur_client_config)
-        assert('tfds_config' in cur_client_config)
+        assert ('attack' in cur_client_config)
+        assert ('batch_size' in cur_client_config)
+        assert ('data_config' in cur_client_config)
+        assert ('local_train_epochs' in cur_client_config)
+
+        data_config = cur_client_config['data_config']
+        if data_config['x_train']:
+            data_config['x_train'] = os.path.abspath(data_config['x_train'])
+        if data_config['y_train']:
+            data_config['y_train'] = os.path.abspath(data_config['y_train'])
+        if data_config['x_test']:
+            data_config['x_test'] = os.path.abspath(data_config['x_test'])
+        if data_config['y_test']:
+            data_config['y_test'] = os.path.abspath(data_config['y_test'])
+        if data_config['x_val']:
+            data_config['x_val'] = os.path.abspath(data_config['x_val'])
+        if data_config['y_val']:
+            data_config['y_val'] = os.path.abspath(data_config['y_val'])
+
+        if 'task' not in cur_client_config:
+            cur_client_config['task'] = conf['task']
 
         if 'client_name' not in cur_client_config:
             cur_client_config['client_name'] = "client-" + str(id)
@@ -113,14 +131,13 @@ if __name__ == '__main__':
     info("Compiled protobuf code")
 
     info("Compiling rust node...")
-    p = subprocess.run(['cargo', 'build', '--release', '-j8'], capture_output=False, check=True)
+    subprocess.run(['cargo', 'build', '--release', '-j8'], capture_output=False, check=True)
     info("Compiled rust node")
 
     info("Cleaning up old databases...")
-    p = subprocess.run(['fd', '-HI', '^.db-[0-9]+$', 'benchmark', '-x', 'rm', '-rf', '{}'], capture_output=False,
+    subprocess.run(['fd', '-HI', '^.db-[0-9]+$', 'benchmark', '-x', 'rm', '-rf', '{}'], capture_output=False,
                        check=True)
     info("Cleaned up old databases")
-
 
     client_sessions = []
     server_sessions = []
@@ -132,9 +149,11 @@ if __name__ == '__main__':
         path = os.path.abspath(path)
         with open(path, 'w') as f:
             json.dump(client_config, f, indent=4, sort_keys=True)
-        
-        client_sessions.append((client_config['client_name'], gen_client_cmd(PYTHON_PATH, client_config['client_name'], path), './benchmark'))
-        server_sessions.append((client_config['server_name'], gen_server_cmd(NODE_PATH, id, client_config['obsido_port']), './benchmark'))
+
+        client_sessions.append((client_config['client_name'],
+                                gen_client_cmd(PYTHON_PATH, client_config['client_name'], path), './benchmark'))
+        server_sessions.append(
+            (client_config['server_name'], gen_server_cmd(NODE_PATH, id, client_config['obsido_port']), './benchmark'))
 
     all_sessions = client_sessions + server_sessions
 

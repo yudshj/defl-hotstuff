@@ -3,39 +3,16 @@ import asyncio
 import json
 import uuid
 
-import tensorflow as tf
-import tensorflow_datasets as tfds
-from .proto.defl_pb2 import Response, WeightsResponse
-
+from cifar10_dataloader import load_data
 from defl.aggregator import MultiKrumAggregator
 from defl.committer import IpcCommitter
 from defl.committer.ipc_committer import ObsidoResponseQueue
 from defl.trainer import Trainer
 from defl.types import *
 from defl.weightpoisoner import *
+from proto.defl_pb2 import Response, WeightsResponse
 
 NUM_BYZANTINE = 1
-
-def normalize_img(image, label):
-  """Normalizes images: `uint8` -> `float32`."""
-  return tf.cast(image, tf.float32) / 255., tf.one_hot(label, depth=10)
-
-def flip_label(image, label):
-    return image, 9 - label
-
-
-def load_data(tfds_config: TFDSConfig, batch_size: int, do_label_flip: bool):
-    ds_name = tfds_config['ds_name']
-    train_ds = tfds.load(ds_name, **tfds_config['fit_args'])
-    test_ds = tfds.load(ds_name, **tfds_config['evaluate_args'])
-    
-    if do_label_flip:
-        train_ds = train_ds.map(flip_label)
-
-    train_ds = train_ds.map(normalize_img).batch(batch_size).cache().prefetch(tf.data.AUTOTUNE)
-    test_ds = test_ds.map(normalize_img).batch(batch_size).cache().prefetch(tf.data.AUTOTUNE)
-
-    return train_ds, test_ds
 
 
 async def main(params: ClientConfig):
@@ -54,7 +31,7 @@ async def main(params: ClientConfig):
         raise ValueError("Unknown poisoning method.")
 
     # learning stuff
-    train_data, test_data = load_data(params['tfds_config'], params['batch_size'], label_flip)
+    train_data, test_data = load_data(params['data_config'], params['batch_size'], label_flip)
     model = tf.keras.models.load_model(params['init_model_path'])
     model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy'])
     trainer = Trainer(
