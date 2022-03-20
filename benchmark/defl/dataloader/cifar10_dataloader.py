@@ -29,7 +29,7 @@ class Cifar10DataLoader(DataLoader):
             tf.keras.layers.Dense(512, activation='relu'),
             tf.keras.layers.Dropout(0.5),
             tf.keras.layers.Dense(10, activation='softmax')
-        ], name='init_model')
+        ], name='cifar10_init_model')
 
         # model.compile(optimizer='sgd', loss='categorical_crossentropy', metrics=['accuracy'])
         model.summary()

@@ -24,17 +24,15 @@ class Sentiment140DataLoader(DataLoader):
         embedding_matrix[-1][-1] = 1
 
         inputs = tf.keras.layers.Input(shape=(_SEQUENCE_LENGTH,))
-        x = inputs
-        x = tf.keras.layers.Embedding(embedding_matrix.shape[0], embedding_matrix.shape[1], weights=[embedding_matrix],
-                                      trainable=False, mask_zero=True)(x)
-        x = tf.keras.layers.SpatialDropout1D(0.2)(x)
+        x = tf.keras.layers.Embedding(embedding_matrix.shape[0],embedding_matrix.shape[1],weights=[embedding_matrix],trainable=False,mask_zero=True)(inputs)
         x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(_LSTM_SIZE, return_sequences=True))(x)
-        x = tf.keras.layers.MultiHeadAttention(num_heads=4, key_dim=256)(x, x)
-        x = tf.keras.layers.BatchNormalization()(x)
+        # x = tf.keras.layers.SpatialDropout1D(0.2)(x)
+        x = tf.keras.layers.MultiHeadAttention(num_heads=4, key_dim=200)(x, x)
+        x = tf.keras.layers.Dropout(0.15)(x)
         x = tf.keras.layers.Flatten()(x)
-        x = tf.keras.layers.Dropout(0.2)(x)
         x = tf.keras.layers.Dense(32, activation='relu')(x)
-        x = tf.keras.layers.Dropout(0.2)(x)
+        x = tf.keras.layers.BatchNormalization()(x)
+        x = tf.keras.layers.Dropout(0.15)(x)
         outputs = tf.keras.layers.Dense(1, activation='sigmoid')(x)
         model = tf.keras.Model(inputs=inputs, outputs=outputs, name='sentiment140_init_model')
         model.summary()

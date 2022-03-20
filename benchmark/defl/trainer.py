@@ -16,7 +16,7 @@ def _serialize_numpy_array_list(arr_list: List[np.ndarray]) -> bytes:
         with h5py.File(bytes_file, 'w') as h5_file:
             h5_file.attrs['length'] = len(arr_list)
             for i, x in enumerate(arr_list):
-                h5_file.create_dataset(f'weight_{i:03d}', data=x)
+                h5_file.create_dataset(f'weight_{i:03d}', data=x, compression='gzip')
         payload = bytes_file.getvalue()
     return payload
 
