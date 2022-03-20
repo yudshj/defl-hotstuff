@@ -1,5 +1,5 @@
 {
-    "init_model_path": "./benchmark/defl/data/init_model.h5",
+    "init_model_path": "./benchmark/defl/data/cifar10_init_model.h5",
     "committee_base_port": 9000,
     "obsido_base_port": 19000,
     "task": "cifar10",

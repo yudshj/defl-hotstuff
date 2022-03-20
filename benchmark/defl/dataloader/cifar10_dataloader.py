@@ -3,6 +3,7 @@ from typing import Any, Tuple
 import numpy as np
 import tensorflow as tf
 import tensorflow_addons as tfa
+from keras import Model
 
 from defl.types import *
 from .dataloader import DataLoader
@@ -34,12 +35,12 @@ class Cifar10DataLoader(DataLoader):
         model.summary()
         return model
 
-    @staticmethod
-    def give_me_compiled_model(model_path: str):
-        model = tf.keras.models.load_model(model_path, compile=False)
-        model.compile(optimizer=tfa.optimizers.AdamW(learning_rate=1e-3, weight_decay=1e-4),
-                      loss='categorical_crossentropy', metrics=['accuracy'])
-        return model
+    def custom_compile(self, model: Model):
+        model.compile(
+            optimizer=tfa.optimizers.AdamW(learning_rate=1e-3, weight_decay=1e-4),
+            loss=tf.keras.losses.CategoricalCrossentropy(),
+            metrics=[tf.metrics.CategoricalAccuracy()]
+        )
 
     @staticmethod
     def _load_data_x_y(x_path: str,

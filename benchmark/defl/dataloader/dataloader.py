@@ -1,27 +1,27 @@
 from abc import ABC, abstractmethod
-from typing import Any, Tuple
+from typing import Tuple
 
-import numpy as np
 import tensorflow as tf
+from keras import Model
+from tensorflow.python.data import Dataset
 
 from defl.types import *
 
 
 class DataLoader(ABC):
-    @staticmethod
+
     @abstractmethod
-    def gen_init_model() -> tf.keras.Model:
+    def custom_compile(self, model: Model):
         pass
 
-    @staticmethod
-    @abstractmethod
-    def give_me_compiled_model(model_path: str):
-        pass
+    def load_model(self, model_path: str, use_saved_compile: bool = True) -> Model:
+        model: Model = tf.keras.models.load_model(model_path, compile=use_saved_compile)
 
-    @staticmethod
-    @abstractmethod
-    def data_augmentation(img: np.ndarray, label: Any) -> Tuple[np.ndarray, Any]:
-        pass
+        if not use_saved_compile or not model.compiled_loss:
+            self.custom_compile(model)
+            pass
+
+        return model
 
     @abstractmethod
     def load_data(self,
@@ -32,5 +32,5 @@ class DataLoader(ABC):
                   shuffle_train: bool = True,
                   normalize: bool = True,
                   augmentation=None,
-                  ) -> Tuple[tf.data.Dataset, tf.data.Dataset]:
+                  ) -> Tuple[Dataset, Dataset]:
         pass

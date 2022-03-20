@@ -6,7 +6,7 @@ import uuid
 from defl.aggregator import MultiKrumAggregator
 from defl.committer import IpcCommitter
 from defl.committer.ipc_committer import ObsidoResponseQueue
-from defl.dataloader import DataLoader, Cifar10DataLoader
+from defl.dataloader import Cifar10DataLoader, Sentiment140DataLoader
 from defl.trainer import Trainer
 from defl.types import *
 from defl.weightpoisoner import *
@@ -18,8 +18,10 @@ NUM_BYZANTINE = 1
 async def main(params: ClientConfig):
     if params['task'] == 'cifar10':
         dataloader = Cifar10DataLoader()
+    elif params['task'] == 'sentiment140':
+        dataloader = Sentiment140DataLoader()
     else:
-        dataloader = DataLoader()
+        raise ValueError("Unknown task {}".format(params['task']))
 
     callbacks = []
     label_flip = False
@@ -37,7 +39,7 @@ async def main(params: ClientConfig):
 
     # learning stuff
     train_data, test_data = dataloader.load_data(params['data_config'], params['batch_size'], label_flip)
-    model = dataloader.give_me_compiled_model(params['init_model_path'])
+    model = dataloader.load_model(params['init_model_path'])
     trainer = Trainer(
         model,
         train_data,
