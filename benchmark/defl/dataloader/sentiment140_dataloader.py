@@ -11,6 +11,9 @@ from defl.types import *
 
 _SEQUENCE_LENGTH = 60
 _LSTM_SIZE = 128
+_KEY_DIM = 256
+_WEIGHT_DECAY = 3e-4
+_DROPOUT = 0.6
 
 
 class Sentiment140DataLoader(DataLoader):
@@ -26,13 +29,16 @@ class Sentiment140DataLoader(DataLoader):
         inputs = tf.keras.layers.Input(shape=(_SEQUENCE_LENGTH,))
         x = tf.keras.layers.Embedding(embedding_matrix.shape[0],embedding_matrix.shape[1],weights=[embedding_matrix],trainable=False,mask_zero=True)(inputs)
         x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(_LSTM_SIZE, return_sequences=True))(x)
-        # x = tf.keras.layers.SpatialDropout1D(0.2)(x)
-        x = tf.keras.layers.MultiHeadAttention(num_heads=4, key_dim=200)(x, x)
-        x = tf.keras.layers.Dropout(0.15)(x)
+        # x = tf.keras.layers.LSTM(_LSTM_SIZE, return_sequences=True)(x)
+
+        x = tf.keras.layers.MultiHeadAttention(num_heads=4, key_dim=_KEY_DIM, dropout=_DROPOUT)(x, x)
         x = tf.keras.layers.Flatten()(x)
-        x = tf.keras.layers.Dense(32, activation='relu')(x)
         x = tf.keras.layers.BatchNormalization()(x)
-        x = tf.keras.layers.Dropout(0.15)(x)
+
+        # x = tf.keras.layers.Dense(512, activation='relu')(x)
+        # x = tf.keras.layers.Dropout(0.25)(x)
+        # x = tf.keras.layers.BatchNormalization()(x)
+
         outputs = tf.keras.layers.Dense(1, activation='sigmoid')(x)
         model = tf.keras.Model(inputs=inputs, outputs=outputs, name='sentiment140_init_model')
         model.summary()
@@ -42,7 +48,7 @@ class Sentiment140DataLoader(DataLoader):
     def custom_compile(model: Model):
         model.compile(
             loss=tf.keras.losses.BinaryCrossentropy(from_logits=False),
-            optimizer=tfa.optimizers.AdamW(learning_rate=1e-3, weight_decay=1e-4),
+            optimizer=tfa.optimizers.AdamW(learning_rate=1e-3, weight_decay=_WEIGHT_DECAY),
             metrics=[tf.keras.metrics.BinaryAccuracy()]
         )
 
