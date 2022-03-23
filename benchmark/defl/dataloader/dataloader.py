@@ -10,8 +10,8 @@ from defl.types import *
 
 class DataLoader(ABC):
 
-    @abstractmethod
-    def custom_compile(self, model: Model):
+    @staticmethod
+    def custom_compile(model: Model):
         pass
 
     def load_model(self, model_path: str, use_saved_compile: bool = True) -> Model:
@@ -31,6 +31,6 @@ class DataLoader(ABC):
                   to_one_hot: bool = True,
                   shuffle_train: bool = True,
                   normalize: bool = True,
-                  augmentation=None,
+                  train_augmentation: bool = True,
                   ) -> Tuple[Dataset, Dataset]:
         pass

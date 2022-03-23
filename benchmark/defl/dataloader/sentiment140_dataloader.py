@@ -38,7 +38,8 @@ class Sentiment140DataLoader(DataLoader):
         model.summary()
         return model
 
-    def custom_compile(self, model: Model):
+    @staticmethod
+    def custom_compile(model: Model):
         model.compile(
             loss=tf.keras.losses.BinaryCrossentropy(from_logits=False),
             optimizer=tfa.optimizers.AdamW(learning_rate=1e-3, weight_decay=1e-4),
@@ -75,12 +76,21 @@ class Sentiment140DataLoader(DataLoader):
                   dataset_config: DataConfig,
                   batch_size: int,
                   do_label_flip: bool,
-                  to_one_hot: bool = True,
+                  to_one_hot: bool = False,
                   shuffle_train: bool = True,
                   repeat_train: bool = False,
-                  normalize: bool = True,
-                  augmentation=None,
+                  normalize: bool = False,
+                  train_augmentation: bool = False,
                   ) -> Tuple[tf.data.Dataset, tf.data.Dataset]:
+        
+        if train_augmentation:
+            raise ValueError('`train_augmentation` is not supported for Sentiment140DataLoader')
+        
+        if normalize:
+            raise ValueError('`normalize` is not supported for Sentiment140DataLoader')
+        
+        if to_one_hot:
+            raise ValueError('`to_one_hot` is not supported for Sentiment140DataLoader')
 
         with tf.device('/cpu:0'):
             train_ds = Sentiment140DataLoader._load_data_x_y(dataset_config['x_train'], dataset_config['y_train'],
@@ -93,7 +103,7 @@ class Sentiment140DataLoader(DataLoader):
             self.steps_per_epoch = (len(train_ds) + batch_size - 1) // batch_size
 
             if shuffle_train:
-                train_ds = train_ds.shuffle(buffer_size=50000)
+                train_ds = train_ds.shuffle(buffer_size=len(train_ds))
 
             if repeat_train:
                 train_ds = train_ds.repeat()
