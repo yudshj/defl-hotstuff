@@ -1,12 +1,11 @@
 from typing import Tuple
 
 import numpy as np
-import scipy.sparse as sp
 import tensorflow as tf
 import tensorflow_addons as tfa
 from keras import Model
 
-from defl.dataloader import DataLoader
+from .dataloader import DataLoader, load_array
 from defl.types import *
 
 _LR = 1e-3
@@ -59,15 +58,9 @@ class Sentiment140DataLoader(DataLoader):
                        y_path: str,
                        do_label_flip: bool
                        ) -> tf.data.Dataset:
-        format = x_path.split('.')[-2:]
-        if format[-1] == 'npy':
-            x = np.load(x_path)
-        elif format[-1] == 'npz' and format[-2] == 'csr':
-            x = sp.load_npz(x_path).toarray()
-        else:
-            raise ValueError(f'Unknown format: {format}')
+        x = load_array(x_path)
+        y = load_array(y_path)
 
-        y = np.load(y_path)
         y_max = np.max(y)
         y_min = np.min(y)
 

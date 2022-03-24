@@ -5,7 +5,7 @@ import tensorflow as tf
 from keras import Model
 
 from defl.types import *
-from .dataloader import DataLoader
+from .dataloader import DataLoader, load_array
 
 _LR = 1e-3
 _NUM_CLASSES = 10
@@ -116,8 +116,8 @@ class Cifar10DataLoader(DataLoader):
                        do_label_flip: bool,
                        data_augment: bool,
                        ) -> tf.data.Dataset:
-        x = np.load(x_path)
-        y = np.load(y_path)
+        x = load_array(x_path)
+        y = load_array(y_path)
 
         if do_label_flip:
             y = _NUM_CLASSES - y - 1
@@ -145,9 +145,9 @@ class Cifar10DataLoader(DataLoader):
 
         with tf.device('/cpu:0'):
             train_ds = self._load_data_x_y(dataset_config['x_train'], dataset_config['y_train'],
-                                           do_label_flip, train_augmentation)
+                                           do_label_flip, data_augment=train_augmentation)
             test_ds = self._load_data_x_y(dataset_config['x_test'], dataset_config['y_test'],
-                                          do_label_flip, False)
+                                          do_label_flip, data_augment=False)
             # val_ds = None
             # TODO: validation dataset may NOT be `None`
 
