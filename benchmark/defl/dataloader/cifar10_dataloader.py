@@ -1,18 +1,19 @@
-from typing import Any, Tuple
+from typing import Tuple
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_addons as tfa
 from keras import Model
 
 from defl.types import *
 from .dataloader import DataLoader
 
+_LR = 1e-3
 _NUM_CLASSES = 10
 _DATA_AUGMENTER = tf.keras.Sequential([
     tf.keras.layers.RandomFlip('horizontal'),
     tf.keras.layers.RandomTranslation(0.1, 0.1, fill_mode='nearest'),
 ])
+
 
 class Cifar10DataLoader(DataLoader):
     def __init__(self):
@@ -22,7 +23,7 @@ class Cifar10DataLoader(DataLoader):
     def gen_init_model() -> tf.keras.Model:
         from keras.layers import Dense, Conv2D, Activation, AveragePooling2D
         from keras.layers import Input, Flatten, Concatenate, BatchNormalization
-        
+
         # start model definition
         # densenet CNNs (composite function) are made of BN-ReLU-Conv2D
         input_shape = (32, 32, 3)
@@ -46,9 +47,9 @@ class Cifar10DataLoader(DataLoader):
         x = BatchNormalization()(inputs)
         x = Activation('relu')(x)
         x = Conv2D(num_filters_bef_dense_block,
-                kernel_size=3,
-                padding='same',
-                kernel_initializer='he_normal')(x)
+                   kernel_size=3,
+                   padding='same',
+                   kernel_initializer='he_normal')(x)
         x = Concatenate()([inputs, x])
 
         # stack of dense blocks bridged by transition layers
@@ -58,15 +59,15 @@ class Cifar10DataLoader(DataLoader):
                 y = BatchNormalization()(x)
                 y = Activation('relu')(y)
                 y = Conv2D(4 * growth_rate,
-                        kernel_size=1,
-                        padding='same',
-                        kernel_initializer='he_normal')(y)
+                           kernel_size=1,
+                           padding='same',
+                           kernel_initializer='he_normal')(y)
                 y = BatchNormalization()(y)
                 y = Activation('relu')(y)
                 y = Conv2D(growth_rate,
-                        kernel_size=3,
-                        padding='same',
-                        kernel_initializer='he_normal')(y)
+                           kernel_size=3,
+                           padding='same',
+                           kernel_initializer='he_normal')(y)
                 x = Concatenate()([x, y])
 
             # no transition layer after the last dense block
@@ -78,11 +79,10 @@ class Cifar10DataLoader(DataLoader):
             num_filters_bef_dense_block = int(num_filters_bef_dense_block * compression_factor)
             y = BatchNormalization()(x)
             y = Conv2D(num_filters_bef_dense_block,
-                    kernel_size=1,
-                    padding='same',
-                    kernel_initializer='he_normal')(y)
+                       kernel_size=1,
+                       padding='same',
+                       kernel_initializer='he_normal')(y)
             x = AveragePooling2D()(y)
-
 
         # add classifier on top
         # after average pooling, size of feature map is 1 x 1
@@ -95,29 +95,25 @@ class Cifar10DataLoader(DataLoader):
         # instantiate and compile model
         # orig paper uses SGD but RMSprop works better for DenseNet
         model = Model(inputs=inputs, outputs=outputs)
-        Cifar10DataLoader.custom_compile(model)
+        Cifar10DataLoader.compile(model)
         return model
 
     @staticmethod
-    def custom_compile(model: Model):
+    def compile(model: Model):
         model.compile(
-            optimizer=tf.keras.optimizers.RMSprop(1e-3),
+            optimizer=tf.keras.optimizers.RMSprop(learning_rate=_LR),
             loss=tf.keras.losses.CategoricalCrossentropy(),
-            metrics=[tf.metrics.CategoricalAccuracy()]
+            metrics=[tf.keras.metrics.CategoricalAccuracy()],
         )
-
 
     @staticmethod
     def data_augmentation(img, label):
         return _DATA_AUGMENTER(img), label
 
-
     @staticmethod
     def _load_data_x_y(x_path: str,
                        y_path: str,
                        do_label_flip: bool,
-                       to_one_hot: bool,
-                       normalize: bool,
                        data_augment: bool,
                        ) -> tf.data.Dataset:
         x = np.load(x_path)
@@ -125,12 +121,12 @@ class Cifar10DataLoader(DataLoader):
 
         if do_label_flip:
             y = _NUM_CLASSES - y - 1
-        if to_one_hot:
-            y = tf.one_hot(y, depth=_NUM_CLASSES)
-            # y = tf.keras.utils.to_categorical(y, num_classes=_NUM_CLASSES)
 
-        if normalize:
-            x = x.astype(np.float32) / 255.
+        # normalize to [0, 1]
+        x = x.astype(np.float32) / 255.
+
+        # convert to one-hot
+        y = tf.one_hot(y, depth=_NUM_CLASSES)
 
         ret = tf.data.Dataset.from_tensor_slices((x, y))
         if data_augment:
@@ -142,18 +138,16 @@ class Cifar10DataLoader(DataLoader):
                   dataset_config: DataConfig,
                   batch_size: int,
                   do_label_flip: bool,
-                  to_one_hot: bool = True,
                   shuffle_train: bool = True,
                   repeat_train: bool = False,
-                  normalize: bool = True,
                   train_augmentation: bool = True,
                   ) -> Tuple[tf.data.Dataset, tf.data.Dataset]:
 
         with tf.device('/cpu:0'):
-            train_ds = Cifar10DataLoader._load_data_x_y(dataset_config['x_train'], dataset_config['y_train'],
-                                                        do_label_flip, to_one_hot, normalize, train_augmentation)
-            test_ds = Cifar10DataLoader._load_data_x_y(dataset_config['x_test'], dataset_config['y_test'],
-                                                       do_label_flip, to_one_hot, normalize, False)
+            train_ds = self._load_data_x_y(dataset_config['x_train'], dataset_config['y_train'],
+                                           do_label_flip, train_augmentation)
+            test_ds = self._load_data_x_y(dataset_config['x_test'], dataset_config['y_test'],
+                                          do_label_flip, False)
             # val_ds = None
             # TODO: validation dataset may NOT be `None`
 

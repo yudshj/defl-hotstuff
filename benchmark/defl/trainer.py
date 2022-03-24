@@ -1,12 +1,13 @@
 import io
 import logging
-from typing import Dict, List
+from typing import Dict, List, Type
 
 import h5py
 import numpy as np
 import tensorflow as tf
 
 from defl.aggregator import AbstractAggregator
+from defl.dataloader.dataloader import DataLoader
 
 
 # from defl.weightpoisoner import WeightPoisoner
@@ -43,16 +44,19 @@ class Trainer:
                  train_data,
                  test_data,
                  local_train_steps: int,
-                 aggregator: AbstractAggregator,
-                 num_byzantine: int):
+                 aggregator: Type[AbstractAggregator],
+                 num_byzantine: int,
+                 dataloader: Type[DataLoader]):
 
         self.model: tf.keras.Model = model
         self.local_train_steps: int = local_train_steps
         self.train_data = train_data
         self.test_data = test_data
-        self.agg: AbstractAggregator = aggregator
+        self.agg: Type[AbstractAggregator] = aggregator
         self.num_byzantine: int = num_byzantine
         self.init_trainable_weights: List[np.ndarray] = _get_trainable_weights(self.model)
+        self.dataloader = dataloader
+        self.dataloader.compile(self.model)
 
     def get_serialized_weights(self) -> bytes:
         return _serialize_numpy_array_list(_get_trainable_weights(self.model))
@@ -65,17 +69,14 @@ class Trainer:
         else:
             for client_name, client_weights_hdf5 in weights.items():
                 client_weights = _deserialize_numpy_array_list(client_weights_hdf5)
-                self.agg.add_client_weight(client_weights)
-            w_agg = self.agg.aggregate(self.num_byzantine)
+                self.agg.add_client_weight(client_weight=client_weights)
+            w_agg = self.agg.aggregate(num_byzantine=self.num_byzantine)
             # self.model.set_weights(w_agg)
             _set_trainable_weights(self.model, w_agg)
             self.agg.clear_aggregator()
 
     def local_train(self, callbacks: List[tf.keras.callbacks.Callback]):
-        """Return the weights of the model after local training"""
-        # optimizer = self.model.optimizer
-        # loss_fn = self.model.loss
-
+        self.dataloader.compile(self.model)
         self.model.fit(self.train_data,
                        steps_per_epoch=self.local_train_steps,
                        epochs=1,

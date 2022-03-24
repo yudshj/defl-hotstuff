@@ -9,6 +9,7 @@ from keras import Model
 from defl.dataloader import DataLoader
 from defl.types import *
 
+_LR = 1e-3
 _SEQUENCE_LENGTH = 60
 _LSTM_SIZE = 128
 _KEY_DIM = 256
@@ -27,7 +28,8 @@ class Sentiment140DataLoader(DataLoader):
         embedding_matrix[-1][-1] = 1
 
         inputs = tf.keras.layers.Input(shape=(_SEQUENCE_LENGTH,))
-        x = tf.keras.layers.Embedding(embedding_matrix.shape[0],embedding_matrix.shape[1],weights=[embedding_matrix],trainable=False,mask_zero=True)(inputs)
+        x = tf.keras.layers.Embedding(embedding_matrix.shape[0], embedding_matrix.shape[1], weights=[embedding_matrix],
+                                      trainable=False, mask_zero=True)(inputs)
         x = tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(_LSTM_SIZE, return_sequences=True))(x)
         # x = tf.keras.layers.LSTM(_LSTM_SIZE, return_sequences=True)(x)
 
@@ -45,11 +47,11 @@ class Sentiment140DataLoader(DataLoader):
         return model
 
     @staticmethod
-    def custom_compile(model: Model):
+    def compile(model: Model):
         model.compile(
-            loss=tf.keras.losses.BinaryCrossentropy(from_logits=False),
-            optimizer=tfa.optimizers.AdamW(learning_rate=1e-3, weight_decay=_WEIGHT_DECAY),
-            metrics=[tf.keras.metrics.BinaryAccuracy()]
+            optimizer=tfa.optimizers.AdamW(weight_decay=_WEIGHT_DECAY, learning_rate=_LR),
+            loss=tf.keras.losses.BinaryCrossentropy(),
+            metrics=[tf.keras.metrics.BinaryAccuracy()],
         )
 
     @staticmethod
@@ -82,27 +84,19 @@ class Sentiment140DataLoader(DataLoader):
                   dataset_config: DataConfig,
                   batch_size: int,
                   do_label_flip: bool,
-                  to_one_hot: bool = False,
                   shuffle_train: bool = True,
                   repeat_train: bool = False,
-                  normalize: bool = False,
                   train_augmentation: bool = False,
                   ) -> Tuple[tf.data.Dataset, tf.data.Dataset]:
-        
+
         if train_augmentation:
             raise ValueError('`train_augmentation` is not supported for Sentiment140DataLoader')
-        
-        if normalize:
-            raise ValueError('`normalize` is not supported for Sentiment140DataLoader')
-        
-        if to_one_hot:
-            raise ValueError('`to_one_hot` is not supported for Sentiment140DataLoader')
 
         with tf.device('/cpu:0'):
-            train_ds = Sentiment140DataLoader._load_data_x_y(dataset_config['x_train'], dataset_config['y_train'],
-                                                             do_label_flip)
-            test_ds = Sentiment140DataLoader._load_data_x_y(dataset_config['x_test'], dataset_config['y_test'],
-                                                            do_label_flip)
+            train_ds = self._load_data_x_y(dataset_config['x_train'], dataset_config['y_train'],
+                                           do_label_flip)
+            test_ds = self._load_data_x_y(dataset_config['x_test'], dataset_config['y_test'],
+                                          do_label_flip)
             # val_ds = None
             # TODO: validation dataset may NOT be `None`
 

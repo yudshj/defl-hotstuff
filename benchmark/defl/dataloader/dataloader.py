@@ -11,16 +11,12 @@ from defl.types import *
 class DataLoader(ABC):
 
     @staticmethod
-    def custom_compile(model: Model):
+    def compile(model: Model):
         pass
 
-    def load_model(self, model_path: str, use_saved_compile: bool = True) -> Model:
+    @staticmethod
+    def load_model(model_path: str, use_saved_compile: bool = False) -> Model:
         model: Model = tf.keras.models.load_model(model_path, compile=use_saved_compile)
-
-        if not use_saved_compile or not model.compiled_loss:
-            self.custom_compile(model)
-            pass
-
         return model
 
     @abstractmethod
@@ -28,9 +24,7 @@ class DataLoader(ABC):
                   dataset_config: DataConfig,
                   batch_size: int,
                   do_label_flip: bool,
-                  to_one_hot: bool = True,
                   shuffle_train: bool = True,
-                  normalize: bool = True,
                   train_augmentation: bool = True,
                   ) -> Tuple[Dataset, Dataset]:
         pass

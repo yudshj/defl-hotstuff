@@ -1,61 +1,73 @@
 {
-    "init_model_path": "./benchmark/defl/data/cifar10_init_model.h5",
-    "committee_base_port": 9000,
-    "obsido_base_port": 19000,
-    "task": "cifar10",
     "client_config": [
         {
             "attack": "none",
             "batch_size": 32,
-            "local_train_steps": 500,
             "data_config": {
-                "x_train": "./benchmark/defl/data/cifar10_x_train.npy",
-                "y_train": "./benchmark/defl/data/cifar10_y_train.npy",
                 "x_test": "./benchmark/defl/data/cifar10_x_test.npy",
-                "y_test": "./benchmark/defl/data/cifar10_y_test.npy",
+                "x_train": "./benchmark/defl/data/cifar10_x_train.npy",
                 "x_val": null,
+                "y_test": "./benchmark/defl/data/cifar10_y_test.npy",
+                "y_train": "./benchmark/defl/data/cifar10_y_train.npy",
                 "y_val": null
-            }
+            },
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0"
+            },
+            "local_train_steps": 4000
         },
         {
             "attack": "none",
             "batch_size": 32,
-            "local_train_steps": 500,
             "data_config": {
-                "x_train": "./benchmark/defl/data/cifar10_x_train.npy",
-                "y_train": "./benchmark/defl/data/cifar10_y_train.npy",
                 "x_test": "./benchmark/defl/data/cifar10_x_test.npy",
-                "y_test": "./benchmark/defl/data/cifar10_y_test.npy",
+                "x_train": "./benchmark/defl/data/cifar10_x_train.npy",
                 "x_val": null,
+                "y_test": "./benchmark/defl/data/cifar10_y_test.npy",
+                "y_train": "./benchmark/defl/data/cifar10_y_train.npy",
                 "y_val": null
-            }
+            },
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0"
+            },
+            "local_train_steps": 4000
         },
         {
             "attack": "none",
             "batch_size": 32,
-            "local_train_steps": 500,
             "data_config": {
-                "x_train": "./benchmark/defl/data/cifar10_x_train.npy",
-                "y_train": "./benchmark/defl/data/cifar10_y_train.npy",
                 "x_test": "./benchmark/defl/data/cifar10_x_test.npy",
-                "y_test": "./benchmark/defl/data/cifar10_y_test.npy",
+                "x_train": "./benchmark/defl/data/cifar10_x_train.npy",
                 "x_val": null,
+                "y_test": "./benchmark/defl/data/cifar10_y_test.npy",
+                "y_train": "./benchmark/defl/data/cifar10_y_train.npy",
                 "y_val": null
-            }
+            },
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "1"
+            },
+            "local_train_steps": 4000
         },
         {
             "attack": "gaussian",
             "batch_size": 32,
-            "local_train_steps": 500,
             "data_config": {
-                "x_train": "./benchmark/defl/data/cifar10_x_train.npy",
-                "y_train": "./benchmark/defl/data/cifar10_y_train.npy",
                 "x_test": "./benchmark/defl/data/cifar10_x_test.npy",
-                "y_test": "./benchmark/defl/data/cifar10_y_test.npy",
+                "x_train": "./benchmark/defl/data/cifar10_x_train.npy",
                 "x_val": null,
+                "y_test": "./benchmark/defl/data/cifar10_y_test.npy",
+                "y_train": "./benchmark/defl/data/cifar10_y_train.npy",
                 "y_val": null
-            }
+            },
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "1"
+            },
+            "local_train_steps": 4000
         }
     ],
-    "node_params_path": "./node_params.json"
+    "committee_base_port": 9000,
+    "init_model_path": "./benchmark/defl/data/cifar10_init_model.h5",
+    "node_params_path": "./node_params.json",
+    "obsido_base_port": 19000,
+    "task": "cifar10"
 }

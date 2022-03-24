@@ -150,10 +150,15 @@ if __name__ == '__main__':
         with open(path, 'w') as f:
             json.dump(client_config, f, indent=4, sort_keys=True)
 
-        client_sessions.append((client_config['client_name'],
-                                gen_client_cmd(PYTHON_PATH, client_config['client_name'], path), './benchmark'))
-        server_sessions.append(
-            (client_config['server_name'], gen_server_cmd(NODE_PATH, id, client_config['obsido_port']), './benchmark'))
+        client_sessions.append((
+            client_config['client_name'],
+            gen_client_cmd(PYTHON_PATH, client_config['client_name'], path),
+            './benchmark'))
+
+        server_sessions.append((
+            client_config['server_name'],
+            gen_server_cmd(NODE_PATH, id, client_config['obsido_port']),
+            './benchmark'))
 
     all_sessions = client_sessions + server_sessions
 
@@ -165,7 +170,7 @@ if __name__ == '__main__':
     for session_name, session_cmd, session_cwd in all_sessions:
         subprocess.run(
             ['tmux', 'new-session', '-d', '-s', session_name, session_cmd],
-            cwd=session_cwd
+            cwd=session_cwd,
         )
     info("Started all sessions")
 

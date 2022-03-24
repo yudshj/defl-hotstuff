@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import json
+import os
 import uuid
 
 from defl.aggregator import MultiKrumAggregator
@@ -15,7 +16,7 @@ from proto.defl_pb2 import Response, WeightsResponse
 NUM_BYZANTINE = 1
 
 
-async def main(params: ClientConfig):
+async def start(params: ClientConfig):
     if params['task'] == 'cifar10':
         dataloader = Cifar10DataLoader()
     elif params['task'] == 'sentiment140':
@@ -39,14 +40,15 @@ async def main(params: ClientConfig):
 
     # learning stuff
     train_data, test_data = dataloader.load_data(params['data_config'], params['batch_size'], label_flip)
-    model = dataloader.load_model(params['init_model_path'])
+    model = dataloader.load_model(params['init_model_path'], use_saved_compile=False)
     trainer = Trainer(
-        model,
-        train_data,
-        test_data,
-        params['local_train_steps'],
-        MultiKrumAggregator(2),  # KrumAggregator(),
-        NUM_BYZANTINE,
+        model=model,
+        train_data=train_data,
+        test_data=test_data,
+        local_train_steps=params['local_train_steps'],
+        aggregator=MultiKrumAggregator(2),
+        num_byzantine=NUM_BYZANTINE,
+        dataloader=dataloader,
     )
 
     # committer stuff
@@ -64,12 +66,14 @@ async def main(params: ClientConfig):
 
     logging.info("[INIT LOOP]")
     logging.info("Current epoch id is %d.", epoch_id)
-    epoch_id = await client_routine(committer, epoch_id, fetch_queue, 0, gst_timeout, trainer, callbacks)
+    epoch_id = await client_routine(committer, epoch_id, fetch_queue, 0, gst_timeout, trainer, callbacks,
+                                    evaluate=False)
 
     for i in range(1, 100):
         logging.info("[LOOP %d]", i)
         logging.info("Current epoch id is %d. Waiting PASSIVE %.0f seconds...", epoch_id, fetch_timeout)
-        epoch_id = await client_routine(committer, epoch_id, fetch_queue, fetch_timeout, gst_timeout, trainer, callbacks)
+        epoch_id = await client_routine(committer, epoch_id, fetch_queue, fetch_timeout, gst_timeout, trainer,
+                                        callbacks, evaluate=True)
 
 
 async def active_fetch_after(sleep_time, committer):
@@ -78,12 +82,14 @@ async def active_fetch_after(sleep_time, committer):
     await committer.fetch_w_last()
 
 
-async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, fetch_timeout, gst_timeout, trainer: Trainer, callbacks: List[tf.keras.callbacks.Callback]):
+async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, fetch_timeout, gst_timeout,
+                         trainer: Trainer, callbacks: List[tf.keras.callbacks.Callback], evaluate: bool = True):
     active_fetch_task = asyncio.create_task(active_fetch_after(fetch_timeout, committer))
     fetch_resp: WeightsResponse = await fetch_queue.drain()
     active_fetch_task.cancel()
 
-    logging.info(f'Collected: {fetch_resp.request_uuid} with epoch_id={fetch_resp.r_last_epoch_id} and size of {fetch_resp.ByteSize()} bytes')
+    logging.info(
+        f'Collected: {fetch_resp.request_uuid} with epoch_id={fetch_resp.r_last_epoch_id} and size of {fetch_resp.ByteSize()} bytes')
 
     # LOL! Remote seems to be old.
     if epoch_id > fetch_resp.r_last_epoch_id:
@@ -98,13 +104,15 @@ async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, 
     #     logging.info("REMOTE LAST_WEIGHTS OF THE CLIENT ARE THE SAME AS LOCAL LAST_WEIGHTS")
     logging.debug("Creating GST event...")
     gst_event = asyncio.create_task(asyncio.sleep(gst_timeout / 1000.0))
+
     # aggregate weights
     logging.info("Aggregating weights...")
     trainer.aggregate_weights(fetch_resp.w_last)
 
     # test accuracy
-    score = trainer.evaluate()
-    logging.info('[AGGREGATED] Test loss: {0[0]}, test accuracy: {0[1]}'.format(score))
+    if evaluate:
+        score = trainer.evaluate()
+        logging.info('[AGGREGATED] Test loss: {0[0]}, test accuracy: {0[1]}'.format(score))
 
     # local_train
     logging.info("Local training...")
@@ -136,9 +144,7 @@ async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, 
     return next_epoch_id
 
 
-if __name__ == '__main__':
-    INIT_MODEL_PATH = 'defl/data/init_model.h5'
-
+def main():
     formatter = logging.Formatter(r"[%(asctime)s - %(levelname)s - %(funcName)s]: %(message)s")
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
@@ -154,4 +160,11 @@ if __name__ == '__main__':
     with open(args.config, 'r') as f:
         params: ClientConfig = json.load(f)
 
-    asyncio.run(main(params))
+    for k, v in params['env'].items():
+        os.environ[k] = v
+
+    asyncio.run(start(params))
+
+
+if __name__ == '__main__':
+    main()

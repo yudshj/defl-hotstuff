@@ -14,6 +14,7 @@ ClientConfig = typing.TypedDict('ClientConfig', {
     'batch_size': int,
     'data_config': DataConfig,
     'local_train_steps': int,
+    'env': dict,
 
     # ----------------------------------------- #
     'task': str,
