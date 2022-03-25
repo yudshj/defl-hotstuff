@@ -12,7 +12,8 @@
                 "y_val": null
             },
             "env": {
-                "CUDA_VISIBLE_DEVICES": "0"
+                "CUDA_VISIBLE_DEVICES": "0",
+                "TF_FORCE_GPU_ALLOW_GROWTH": "true"
             },
             "local_train_steps": 4000
         },
@@ -28,7 +29,8 @@
                 "y_val": null
             },
             "env": {
-                "CUDA_VISIBLE_DEVICES": "0"
+                "CUDA_VISIBLE_DEVICES": "1",
+                "TF_FORCE_GPU_ALLOW_GROWTH": "true"
             },
             "local_train_steps": 4000
         },
@@ -44,7 +46,8 @@
                 "y_val": null
             },
             "env": {
-                "CUDA_VISIBLE_DEVICES": "1"
+                "CUDA_VISIBLE_DEVICES": "2",
+                "TF_FORCE_GPU_ALLOW_GROWTH": "true"
             },
             "local_train_steps": 4000
         },
@@ -60,7 +63,8 @@
                 "y_val": null
             },
             "env": {
-                "CUDA_VISIBLE_DEVICES": "1"
+                "CUDA_VISIBLE_DEVICES": "3",
+                "TF_FORCE_GPU_ALLOW_GROWTH": "true"
             },
             "local_train_steps": 4000
         }

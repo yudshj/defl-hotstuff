@@ -1,3 +1,21 @@
+import tensorflow as tf
+
+# def gpu_memory_limit(num_MB: int = 4096):
+#     gpus = tf.config.experimental.list_physical_devices('GPU')
+#     if gpus:
+#         # Restrict TensorFlow to only allocate 1GB of memory on the first GPU
+#         try:
+#             tf.config.experimental.set_virtual_device_configuration(
+#                 gpus[0],
+#                 [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=num_MB)])
+#             logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+#             print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+#         except RuntimeError as e:
+#             # Virtual devices must be set before GPUs have been initialized
+#             print(e)
+            
+# gpu_memory_limit(2500)
+
 import argparse
 import asyncio
 import json
@@ -143,23 +161,8 @@ async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, 
 
     return next_epoch_id
 
-def gpu_memory_limit(num_MB: int = 4096):
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    if gpus:
-        # Restrict TensorFlow to only allocate 1GB of memory on the first GPU
-        try:
-            tf.config.experimental.set_virtual_device_configuration(
-                gpus[0],
-                [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=num_MB)])
-            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
-            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
-        except RuntimeError as e:
-            # Virtual devices must be set before GPUs have been initialized
-            print(e)
-
 
 def main():
-    gpu_memory_limit(4096)
     formatter = logging.Formatter(r"[%(asctime)s - %(levelname)s - %(funcName)s]: %(message)s")
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
