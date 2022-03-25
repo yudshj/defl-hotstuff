@@ -16,7 +16,7 @@ db_*
 benchmark/client
 benchmark/node
 benchmark/defl/data
-benchmark/defl/logs
+benchmark/logs
 
 .idea
 /benchmark/defl/data/init_model.h5
