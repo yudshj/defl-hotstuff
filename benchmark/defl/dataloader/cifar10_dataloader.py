@@ -17,7 +17,8 @@ _DATA_AUGMENTER = tf.keras.Sequential([
 
 class Cifar10DataLoader(DataLoader):
     def __init__(self):
-        self.steps_per_epoch: int = -1
+        self.train_steps_per_epoch: int = -1
+        self.test_steps_per_epoch: int = -1
 
     @staticmethod
     def gen_init_model() -> tf.keras.Model:
@@ -151,7 +152,8 @@ class Cifar10DataLoader(DataLoader):
             # val_ds = None
             # TODO: validation dataset may NOT be `None`
 
-            self.steps_per_epoch = (len(train_ds) + batch_size - 1) // batch_size
+            self.train_steps_per_epoch = (len(train_ds) + batch_size - 1) // batch_size
+            self.test_steps_per_epoch = (len(test_ds) + batch_size - 1) // batch_size
 
             if shuffle_train:
                 train_ds = train_ds.shuffle(buffer_size=len(train_ds))

@@ -2,6 +2,7 @@
     "client_config": [
         {
             "attack": "none",
+            "gst": 600000,
             "batch_size": 32,
             "data_config": {
                 "x_test": "./benchmark/defl/data/splits/cifar10/iid_4/node-0_x_test.npz",
@@ -15,10 +16,11 @@
                 "CUDA_VISIBLE_DEVICES": "0",
                 "TF_FORCE_GPU_ALLOW_GROWTH": "true"
             },
-            "local_train_steps": 4000
+            "local_train_steps": 1000
         },
         {
             "attack": "none",
+            "gst": 600000,
             "batch_size": 32,
             "data_config": {
                 "x_test": "./benchmark/defl/data/splits/cifar10/iid_4/node-1_x_test.npz",
@@ -32,10 +34,11 @@
                 "CUDA_VISIBLE_DEVICES": "1",
                 "TF_FORCE_GPU_ALLOW_GROWTH": "true"
             },
-            "local_train_steps": 4000
+            "local_train_steps": 1000
         },
         {
             "attack": "none",
+            "gst": 600000,
             "batch_size": 32,
             "data_config": {
                 "x_test": "./benchmark/defl/data/splits/cifar10/iid_4/node-2_x_test.npz",
@@ -49,10 +52,11 @@
                 "CUDA_VISIBLE_DEVICES": "2",
                 "TF_FORCE_GPU_ALLOW_GROWTH": "true"
             },
-            "local_train_steps": 4000
+            "local_train_steps": 1000
         },
         {
             "attack": "none",
+            "gst": 600000,
             "batch_size": 32,
             "data_config": {
                 "x_test": "./benchmark/defl/data/splits/cifar10/iid_4/node-3_x_test.npz",
@@ -66,7 +70,7 @@
                 "CUDA_VISIBLE_DEVICES": "3",
                 "TF_FORCE_GPU_ALLOW_GROWTH": "true"
             },
-            "local_train_steps": 4000
+            "local_train_steps": 1000
         }
     ],
     "committee_base_port": 9000,

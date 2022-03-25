@@ -57,7 +57,9 @@ async def start(params: ClientConfig):
         raise ValueError("Unknown poisoning method.")
 
     # learning stuff
-    train_data, test_data = dataloader.load_data(params['data_config'], params['batch_size'], label_flip)
+    train_data, test_data = dataloader.load_data(params['data_config'], params['batch_size'], label_flip, repeat_train=True)
+    logging.info("Train step_per_epoch: {}".format(dataloader.train_steps_per_epoch))
+    logging.info("Test step_per_epoch: {}".format(dataloader.test_steps_per_epoch))
     model = dataloader.load_model(params['init_model_path'], use_saved_compile=False)
     trainer = Trainer(
         model=model,
@@ -120,8 +122,8 @@ async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, 
     # if last_weights_to_check is not None:
     #     assert fetch_resp.w_last[client_name] == last_weights_to_check
     #     logging.info("REMOTE LAST_WEIGHTS OF THE CLIENT ARE THE SAME AS LOCAL LAST_WEIGHTS")
-    logging.debug("Creating GST event...")
-    gst_event = asyncio.create_task(asyncio.sleep(gst_timeout / 1000.0))
+    logging.info("Creating GST event...")
+    gst_event = asyncio.create_task(asyncio.sleep(gst_timeout))
 
     # aggregate weights
     logging.info("Aggregating weights...")

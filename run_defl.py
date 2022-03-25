@@ -142,6 +142,8 @@ if __name__ == '__main__':
     client_sessions = []
     server_sessions = []
 
+    db_to_remove = []
+
     info("Generating configs for client nodes...")
     for id, client_config in enumerate(client_config_list):
         file_name = '.{}.json'.format(client_config['client_name'])
@@ -153,12 +155,21 @@ if __name__ == '__main__':
         client_sessions.append((
             client_config['client_name'],
             gen_client_cmd(PYTHON_PATH, client_config['client_name'], path),
-            './benchmark'))
+            './benchmark',
+            client_config['env']))
 
         server_sessions.append((
             client_config['server_name'],
             gen_server_cmd(NODE_PATH, id, client_config['obsido_port']),
-            './benchmark'))
+            './benchmark',
+            client_config['env']))
+        
+        db_to_remove.append(f".db-{id}")
+    
+    info("Removing db files...")
+    for db_file in db_to_remove:
+        subprocess.run(['rm', '-rf', db_file], cwd='./benchmark')
+    info("Removed db files.")
 
     all_sessions = client_sessions + server_sessions
 
@@ -167,9 +178,13 @@ if __name__ == '__main__':
         print('    ', item)
 
     info("Starting all sessions...")
-    for session_name, session_cmd, session_cwd in all_sessions:
+    for session_name, session_cmd, session_cwd, additional_envs in all_sessions:
+        tmp = []
+        for k, v in additional_envs.items():
+            tmp.append('-e')
+            tmp.append('{}={}'.format(k, v))
         subprocess.run(
-            ['tmux', 'new-session', '-d', '-s', session_name, session_cmd],
+            ['tmux', 'new-session', *tmp, '-d', '-s', session_name, session_cmd],
             cwd=session_cwd,
         )
     info("Started all sessions")
@@ -188,7 +203,7 @@ if __name__ == '__main__':
         pass
 
     info("Killing all sessions...")
-    for session_name, session_cmd, session_cwd in all_sessions:
+    for session_name, _, session_cwd, _ in all_sessions:
         subprocess.run(
             ['tmux', 'kill-session', '-t', session_name],
             cwd=session_cwd
