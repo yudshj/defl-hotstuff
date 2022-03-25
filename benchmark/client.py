@@ -108,7 +108,7 @@ async def start(params: ClientConfig):
     epoch_id = await client_routine(committer, epoch_id, fetch_queue, 0, gst_timeout, trainer, callbacks,
                                     evaluate=False)
     model_save_path = "./models/{}/epoch_{:05d}.h5".format(client_name, epoch_id)
-    trainer.model.save_model(model_save_path)
+    trainer.model.save(model_save_path)
     logging.info("Saved model to %s", model_save_path)
 
     i = 0
@@ -119,7 +119,7 @@ async def start(params: ClientConfig):
         epoch_id = await client_routine(committer, epoch_id, fetch_queue, fetch_timeout, gst_timeout, trainer,
                                         callbacks, evaluate=True)
         model_save_path = "./models/{}/epoch_{:05d}.h5".format(client_name, epoch_id)
-        trainer.model.save_model(model_save_path)
+        trainer.model.save(model_save_path)
         logging.info("Saved model to %s", model_save_path)
 
 
