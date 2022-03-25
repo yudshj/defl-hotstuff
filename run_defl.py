@@ -193,9 +193,14 @@ if __name__ == '__main__':
     try:
         # subprocess.run(['termdown', str(args.sleep_sec)])
         # subprocess.run(['sleep', str(args.sleep_sec)])
-        for i in range(args.sleep_sec, 0, -10):
-            info(f'Remaining {i} seconds...')
-            sleep(10)
+        if args.sleep_sec > 0:
+            for i in range(args.sleep_sec, 0, -10):
+                info(f'Remaining {i} seconds...')
+                sleep(10)
+        else:
+            while True:
+                info('Sleeping for 10 seconds...')
+                sleep(10)
     except KeyboardInterrupt:
         print()
         warning("Keyboard interrupt detected, killing sessions...")

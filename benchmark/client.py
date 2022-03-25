@@ -1,4 +1,26 @@
+import argparse
+import asyncio
+import json
+import os
+import threading
+import time
+import uuid
+
 import tensorflow as tf
+
+from defl.aggregator import MultiKrumAggregator
+from defl.committer import IpcCommitter
+from defl.committer.ipc_committer import ObsidoResponseQueue
+from defl.dataloader import Cifar10DataLoader, Sentiment140DataLoader
+from defl.trainer import Trainer
+from defl.types import *
+from defl.weightpoisoner import *
+from proto.defl_pb2 import Response, WeightsResponse
+
+
+def sleep_then_info(sleep_time: float, message: str):
+    time.sleep(sleep_time)
+    logging.info(message)
 
 # def gpu_memory_limit(num_MB: int = 4096):
 #     gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -16,22 +38,12 @@ import tensorflow as tf
             
 # gpu_memory_limit(2500)
 
-import argparse
-import asyncio
-import json
-import os
-import uuid
 
-from defl.aggregator import MultiKrumAggregator
-from defl.committer import IpcCommitter
-from defl.committer.ipc_committer import ObsidoResponseQueue
-from defl.dataloader import Cifar10DataLoader, Sentiment140DataLoader
-from defl.trainer import Trainer
-from defl.types import *
-from defl.weightpoisoner import *
-from proto.defl_pb2 import Response, WeightsResponse
 
-NUM_BYZANTINE = 1
+_NUM_BYZANTINE = 1
+_MULTIKRUM_FACTOR = 2
+_GAUSSIAN_ATTACK_FACTOR = 1/1000
+_SIGNFLIP_ATTACK_FACTOR = -1
 
 
 async def start(params: ClientConfig):
@@ -47,9 +59,9 @@ async def start(params: ClientConfig):
     if params['attack'] == 'none':
         pass
     elif params['attack'] == 'gaussian':
-        callbacks.append(GaussianNoiseWeightPoisoner(1 / 1000))
+        callbacks.append(GaussianNoiseWeightPoisoner(_GAUSSIAN_ATTACK_FACTOR))
     elif params['attack'] == 'sign':
-        callbacks.append(SignFlipWeightPoisoner(-1))
+        callbacks.append(SignFlipWeightPoisoner(_SIGNFLIP_ATTACK_FACTOR))
     elif params['attack'] == 'label':
         label_flip = True
         # raise NotImplementedError("Label-flip poisoning is not implemented yet.")
@@ -66,8 +78,8 @@ async def start(params: ClientConfig):
         train_data=train_data,
         test_data=test_data,
         local_train_steps=params['local_train_steps'],
-        aggregator=MultiKrumAggregator(2),
-        num_byzantine=NUM_BYZANTINE,
+        aggregator=MultiKrumAggregator(_MULTIKRUM_FACTOR),
+        num_byzantine=_NUM_BYZANTINE,
         dataloader=dataloader,
     )
 
@@ -81,19 +93,35 @@ async def start(params: ClientConfig):
     # defl stuff
     epoch_id = -1
 
-    fetch_timeout = params['fetch'] / 1000.0
-    gst_timeout = params['gst'] / 1000.0
-
+    fetch_timeout: float = params['fetch'] / 1000.0
+    gst_timeout: float = params['gst'] / 1000.0
+    logging.info("+++++++++++++++++++++++++ [CLIENT] +++++++++++++++++++++++++")
+    logging.info("+ client_name:        {:36s} +".format(client_name))
+    logging.info("+ task:               {:36s} +".format(params['task']))
+    logging.info("+ attack:             {:36s} +".format(params['attack']))
+    logging.info("+ fetch_timeout:      {:36s} +".format('%.2f seconds' % fetch_timeout))
+    logging.info("+ gst_timeout:        {:36s} +".format('%.2f seconds' % gst_timeout))
+    logging.info("+ local_train_steps:  {:36s} +".format('%d' % params['local_train_steps']))
+    logging.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
     logging.info("[INIT LOOP]")
     logging.info("Current epoch id is %d.", epoch_id)
     epoch_id = await client_routine(committer, epoch_id, fetch_queue, 0, gst_timeout, trainer, callbacks,
                                     evaluate=False)
+    model_save_path = "./models/{}/epoch_{:05d}.h5".format(client_name, epoch_id)
+    trainer.model.save_model(model_save_path)
+    logging.info("Saved model to %s", model_save_path)
 
-    for i in range(1, 100):
+    i = 0
+    while True:
+        i += 1
         logging.info("[LOOP %d]", i)
         logging.info("Current epoch id is %d. Waiting PASSIVE %.0f seconds...", epoch_id, fetch_timeout)
         epoch_id = await client_routine(committer, epoch_id, fetch_queue, fetch_timeout, gst_timeout, trainer,
                                         callbacks, evaluate=True)
+        model_save_path = "./models/{}/epoch_{:05d}.h5".format(client_name, epoch_id)
+        trainer.model.save_model(model_save_path)
+        logging.info("Saved model to %s", model_save_path)
+
 
 
 async def active_fetch_after(sleep_time, committer):
@@ -102,7 +130,7 @@ async def active_fetch_after(sleep_time, committer):
     await committer.fetch_w_last()
 
 
-async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, fetch_timeout, gst_timeout,
+async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, fetch_timeout, gst_timeout: float,
                          trainer: Trainer, callbacks: List[tf.keras.callbacks.Callback], evaluate: bool = True):
     active_fetch_task = asyncio.create_task(active_fetch_after(fetch_timeout, committer))
     fetch_resp: WeightsResponse = await fetch_queue.drain()
@@ -123,7 +151,8 @@ async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, 
     #     assert fetch_resp.w_last[client_name] == last_weights_to_check
     #     logging.info("REMOTE LAST_WEIGHTS OF THE CLIENT ARE THE SAME AS LOCAL LAST_WEIGHTS")
     logging.info("Creating GST event...")
-    gst_event = asyncio.create_task(asyncio.sleep(gst_timeout))
+    gst_event = threading.Thread(target=sleep_then_info, args=(gst_timeout, "GST arrived."))
+    gst_event.start()
 
     # aggregate weights
     logging.info("Aggregating weights...")
@@ -131,8 +160,9 @@ async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, 
 
     # test accuracy
     if evaluate:
+        logging.info("Evaluating...")
         score = trainer.evaluate()
-        logging.info('[AGGREGATED] Test loss: {0[0]}, test accuracy: {0[1]}'.format(score))
+        logging.info('[AGGREGATED] loss: {0[0]}, accuracy: {0[1]}'.format(score))
 
     # local_train
     logging.info("Local training...")
@@ -153,7 +183,7 @@ async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, 
 
     # wait_for_GST
     logging.info("Waiting for GST...")
-    await gst_event
+    gst_event.join()
 
     # vote for new epoch
     logging.info("Voting new epoch %d...", next_epoch_id)
@@ -179,6 +209,12 @@ def main():
 
     with open(args.config, 'r') as f:
         params: ClientConfig = json.load(f)
+    
+    logging.info("Loaded json config: %s", args.config)
+    logging.info("Environments: {}".format(params['env']))
+    logging.info("Data config:")
+    for k, v in params['data_config'].items():
+        logging.info("\t{}: {}".format(k, v))
 
     for k, v in params['env'].items():
         os.environ[k] = v

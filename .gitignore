@@ -17,6 +17,7 @@ benchmark/client
 benchmark/node
 benchmark/defl/data
 benchmark/logs
+benchmark/models
 
 .idea
 /benchmark/defl/data/init_model.h5
