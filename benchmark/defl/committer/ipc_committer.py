@@ -86,7 +86,7 @@ class IpcCommitter:
             logging.info(f'LAST_WEIGHTS Received {len(resp)} bytes')
             response = WeightsResponse()
             response.ParseFromString(resp)
-            logging.info(f'LAST_WEIGHTS HANDLE [{response.response_uuid}]')
+            logging.debug(f'LAST_WEIGHTS HANDLE [{response.response_uuid}]')
             await self.fetch_queue.put(response)
 
     async def collect(self, client_request_uuid) -> Response:
@@ -185,11 +185,11 @@ class ObsidoResponseQueue(asyncio.Queue):
 
     async def drain(self) -> WeightsResponse:
         fetch_resp: WeightsResponse = await self.get()
-        logging.info(f"response_uuid={fetch_resp.response_uuid} epoch_id={fetch_resp.r_last_epoch_id}")
+        logging.debug(f"response_uuid={fetch_resp.response_uuid} epoch_id={fetch_resp.r_last_epoch_id}")
         while True:
             try:
                 pending_fetch_resp = self.get_nowait()
-                logging.info(f"response_uuid={pending_fetch_resp.response_uuid} epoch_id={fetch_resp.r_last_epoch_id}")
+                logging.debug(f"response_uuid={pending_fetch_resp.response_uuid} epoch_id={fetch_resp.r_last_epoch_id}")
                 if fetch_resp.r_last_epoch_id < pending_fetch_resp.r_last_epoch_id:
                     fetch_resp = pending_fetch_resp
             except asyncio.QueueEmpty:

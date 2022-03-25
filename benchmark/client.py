@@ -108,7 +108,7 @@ async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, 
     fetch_resp: WeightsResponse = await fetch_queue.drain()
     active_fetch_task.cancel()
 
-    logging.info(
+    logging.debug(
         f'Collected: {fetch_resp.request_uuid} with epoch_id={fetch_resp.r_last_epoch_id} and size of {fetch_resp.ByteSize()} bytes')
 
     # LOL! Remote seems to be old.
