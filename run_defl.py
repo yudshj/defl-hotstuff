@@ -17,7 +17,7 @@ NODE_PATH = os.path.abspath('./benchmark/node')
 
 
 def gen_client_cmd(python_path: str, client_name: str, client_config_path: str):
-    return '{} client.py {} 2> logs/{}.log'.format(
+    return '{} client.py {} 2> logs/{}.log ; bash'.format(
         python_path,
         client_config_path,
         client_name

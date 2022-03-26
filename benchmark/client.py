@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import json
+import gc
 import os
 import threading
 import time
@@ -39,13 +40,6 @@ def sleep_then_info(sleep_time: float, message: str):
 # gpu_memory_limit(2500)
 
 
-
-_NUM_BYZANTINE = 1
-_MULTIKRUM_FACTOR = 2
-_GAUSSIAN_ATTACK_FACTOR = 1/1000
-_SIGNFLIP_ATTACK_FACTOR = -1
-
-
 async def start(params: ClientConfig):
     if params['task'] == 'cifar10':
         dataloader = Cifar10DataLoader()
@@ -59,9 +53,9 @@ async def start(params: ClientConfig):
     if params['attack'] == 'none':
         pass
     elif params['attack'] == 'gaussian':
-        callbacks.append(GaussianNoiseWeightPoisoner(_GAUSSIAN_ATTACK_FACTOR))
+        callbacks.append(GaussianNoiseWeightPoisoner(params['gaussian_attack_factor']))
     elif params['attack'] == 'sign':
-        callbacks.append(SignFlipWeightPoisoner(_SIGNFLIP_ATTACK_FACTOR))
+        callbacks.append(SignFlipWeightPoisoner(params['signflip_attack_factor']))
     elif params['attack'] == 'label':
         label_flip = True
         # raise NotImplementedError("Label-flip poisoning is not implemented yet.")
@@ -78,8 +72,8 @@ async def start(params: ClientConfig):
         train_data=train_data,
         test_data=test_data,
         local_train_steps=params['local_train_steps'],
-        aggregator=MultiKrumAggregator(_MULTIKRUM_FACTOR),
-        num_byzantine=_NUM_BYZANTINE,
+        aggregator=MultiKrumAggregator(params['multikrum_factor']),
+        num_byzantine=params['num_byzantine'],
         dataloader=dataloader,
     )
 
@@ -113,6 +107,7 @@ async def start(params: ClientConfig):
 
     i = 0
     while True:
+        gc.collect()
         i += 1
         logging.info("[LOOP %d]", i)
         logging.info("Current epoch id is %d. Waiting PASSIVE %.0f seconds...", epoch_id, fetch_timeout)

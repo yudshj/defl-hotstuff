@@ -25,4 +25,10 @@ ClientConfig = typing.TypedDict('ClientConfig', {
     'init_model_path': str,
     'fetch': int,
     'gst': int,
+
+    # ----------- byzantine config ------------ #
+    'num_byzantine': int,
+    'multikrum_factor': int,
+    'gaussian_attack_factor': float,
+    'signflip_attack_factor': float,
 })

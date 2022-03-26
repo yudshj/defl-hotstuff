@@ -2,6 +2,10 @@
     "client_config": [
         {
             "attack": "none",
+            "num_byzantine": 1,
+            "multikrum_factor": 2,
+            "gaussian_attack_factor": 1e-3,
+            "signflip_attack_factor": -1.0,
             "gst": 600000,
             "batch_size": 32,
             "data_config": {
@@ -20,6 +24,10 @@
         },
         {
             "attack": "none",
+            "num_byzantine": 1,
+            "multikrum_factor": 2,
+            "gaussian_attack_factor": 1e-3,
+            "signflip_attack_factor": -1.0,
             "gst": 600000,
             "batch_size": 32,
             "data_config": {
@@ -38,6 +46,10 @@
         },
         {
             "attack": "none",
+            "num_byzantine": 1,
+            "multikrum_factor": 2,
+            "gaussian_attack_factor": 1e-3,
+            "signflip_attack_factor": -1.0,
             "gst": 600000,
             "batch_size": 32,
             "data_config": {
@@ -56,6 +68,10 @@
         },
         {
             "attack": "none",
+            "num_byzantine": 1,
+            "multikrum_factor": 2,
+            "gaussian_attack_factor": 1e-3,
+            "signflip_attack_factor": -1.0,
             "gst": 600000,
             "batch_size": 32,
             "data_config": {
