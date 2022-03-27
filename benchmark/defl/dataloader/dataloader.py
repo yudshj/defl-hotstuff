@@ -40,7 +40,8 @@ class DataLoader(ABC):
                   dataset_config: DataConfig,
                   batch_size: int,
                   do_label_flip: bool,
-                  shuffle_train: bool = True,
-                  train_augmentation: bool = True,
+                  shuffle_train: bool,
+                  repeat_train: bool,
+                  train_augmentation: bool,
                   ) -> Tuple[Dataset, Dataset]:
         pass

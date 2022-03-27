@@ -44,15 +44,15 @@ class Trainer:
                  train_data,
                  test_data,
                  local_train_steps: int,
-                 aggregator: Type[AbstractAggregator],
+                 aggregator: AbstractAggregator,
                  num_byzantine: int,
-                 dataloader: Type[DataLoader]):
+                 dataloader: DataLoader):
 
         self.model: tf.keras.Model = model
         self.local_train_steps: int = local_train_steps
         self.train_data = train_data
         self.test_data = test_data
-        self.agg: Type[AbstractAggregator] = aggregator
+        self.agg: AbstractAggregator = aggregator
         self.num_byzantine: int = num_byzantine
         self.dataloader = dataloader
 

@@ -1,19 +1,22 @@
+import os
+
+PYTHON_PATH = shutil.which('python3')
+assert PYTHON_PATH
+PYTHON_PATH = os.path.abspath(PYTHON_PATH)
+NODE_PATH = os.path.abspath('./benchmark/node')
+
 import argparse
 import copy
 import json
 import logging
-import os
 import shutil
 import subprocess
-import typing
 import uuid
 from logging import info, warning
 from time import sleep
+from typing import List
 
-from benchmark.defl.types import *
-
-PYTHON_PATH = os.path.abspath(shutil.which('python3'))
-NODE_PATH = os.path.abspath('./benchmark/node')
+from benchmark.defl.types import ClientConfig
 
 
 def gen_client_cmd(python_path: str, client_name: str, client_config_path: str):
@@ -40,14 +43,14 @@ if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--sleep_sec', type=int, default=150)
+    parser.add_argument('--sleep_sec', type=int, default=-1)
     parser.add_argument('--config', type=str, default="defl_config.json")
     args = parser.parse_args()
 
     conf = json.load(open(args.config, 'r'))
     committee_base_port = conf["committee_base_port"]
     obsido_base_port = conf["obsido_base_port"]
-    client_config_list: typing.List[ClientConfig] = conf["client_config"]
+    client_config_list: List[ClientConfig] = conf["client_config"]
 
     node_params_json_path = os.path.abspath(conf["node_params_path"])
     init_model_path = os.path.abspath(conf["init_model_path"])
@@ -198,9 +201,11 @@ if __name__ == '__main__':
                 info(f'Remaining {i} seconds...')
                 sleep(10)
         else:
+            total_sec = 0
             while True:
-                info('Sleeping for 30 seconds...')
+                info(f'Slept for {total_sec} seconds...')
                 sleep(30)
+                total_sec += 30
     except KeyboardInterrupt:
         print()
         warning("Keyboard interrupt detected, killing sessions...")

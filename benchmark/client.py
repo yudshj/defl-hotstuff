@@ -8,6 +8,7 @@ import time
 import uuid
 
 import tensorflow as tf
+from benchmark.defl.dataloader.dataloader import DataLoader
 
 from defl.aggregator import MultiKrumAggregator
 from defl.committer import IpcCommitter
@@ -42,7 +43,7 @@ def sleep_then_info(sleep_time: float, message: str):
 
 async def start(params: ClientConfig):
     if params['task'] == 'cifar10':
-        dataloader = Cifar10DataLoader()
+        dataloader: DataLoader = Cifar10DataLoader()
     elif params['task'] == 'sentiment140':
         dataloader = Sentiment140DataLoader()
     else:
@@ -53,8 +54,10 @@ async def start(params: ClientConfig):
     if params['attack'] == 'none':
         pass
     elif params['attack'] == 'gaussian':
+        assert params['gaussian_attack_factor']
         callbacks.append(GaussianNoiseWeightPoisoner(params['gaussian_attack_factor']))
     elif params['attack'] == 'sign':
+        assert params['signflip_attack_factor']
         callbacks.append(SignFlipWeightPoisoner(params['signflip_attack_factor']))
     elif params['attack'] == 'label':
         label_flip = True
@@ -122,7 +125,7 @@ async def start(params: ClientConfig):
 
 
 
-async def active_fetch_after(sleep_time, committer):
+async def active_fetch_after(sleep_time: float, committer):
     await asyncio.sleep(sleep_time)
     logging.info("PASSIVE received nothing. Fetching...")
     await committer.fetch_w_last()

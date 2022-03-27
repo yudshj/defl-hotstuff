@@ -1,16 +1,18 @@
-import typing
+from typing import TypedDict, Literal, Optional
 
-DataConfig = typing.TypedDict("DataConfig", {
+DataConfig = TypedDict("DataConfig", {
     'x_train': str,
     'y_train': str,
     'x_test': str,
     'y_test': str,
-    'x_val': str,
-    'y_val': str,
+    'x_val': Optional[str],
+    'y_val': Optional[str],
 })
 
-ClientConfig = typing.TypedDict('ClientConfig', {
-    'attack': str,
+ATTACK_MODE = Literal["none", "gaussian", "sign", "label"]
+
+ClientConfig = TypedDict('ClientConfig', {
+    'attack': ATTACK_MODE,
     'batch_size': int,
     'data_config': DataConfig,
     'local_train_steps': int,
@@ -30,6 +32,6 @@ ClientConfig = typing.TypedDict('ClientConfig', {
     # ----------- byzantine config ------------ #
     'num_byzantine': int,
     'multikrum_factor': int,
-    'gaussian_attack_factor': float,
-    'signflip_attack_factor': float,
+    'gaussian_attack_factor': Optional[float],
+    'signflip_attack_factor': Optional[float],
 })
