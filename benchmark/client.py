@@ -8,8 +8,8 @@ import time
 import uuid
 
 import tensorflow as tf
-from benchmark.defl.dataloader.dataloader import DataLoader
 
+from defl.dataloader.dataloader import DataLoader
 from defl.aggregator import MultiKrumAggregator
 from defl.committer import IpcCommitter
 from defl.committer.ipc_committer import ObsidoResponseQueue

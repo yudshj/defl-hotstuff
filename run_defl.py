@@ -1,4 +1,5 @@
 import os
+import shutil
 
 PYTHON_PATH = shutil.which('python3')
 assert PYTHON_PATH
@@ -9,7 +10,6 @@ import argparse
 import copy
 import json
 import logging
-import shutil
 import subprocess
 import uuid
 from logging import info, warning
