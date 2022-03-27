@@ -5,8 +5,8 @@
             "num_byzantine": 1,
             "save_freq": 5,
             "multikrum_factor": 2,
-            "gaussian_attack_factor": 1e-3,
-            "signflip_attack_factor": -1.0,
+            "gaussian_attack_factor": null,
+            "signflip_attack_factor": null,
             "gst": 600000,
             "batch_size": 32,
             "data_config": {
@@ -28,8 +28,8 @@
             "num_byzantine": 1,
             "save_freq": 5,
             "multikrum_factor": 2,
-            "gaussian_attack_factor": 1e-3,
-            "signflip_attack_factor": -1.0,
+            "gaussian_attack_factor": null,
+            "signflip_attack_factor": null,
             "gst": 600000,
             "batch_size": 32,
             "data_config": {
@@ -51,8 +51,8 @@
             "num_byzantine": 1,
             "save_freq": 5,
             "multikrum_factor": 2,
-            "gaussian_attack_factor": 1e-3,
-            "signflip_attack_factor": -1.0,
+            "gaussian_attack_factor": null,
+            "signflip_attack_factor": null,
             "gst": 600000,
             "batch_size": 32,
             "data_config": {
@@ -70,12 +70,12 @@
             "local_train_steps": 1000
         },
         {
-            "attack": "none",
+            "attack": "label",
             "num_byzantine": 1,
             "save_freq": 5,
             "multikrum_factor": 2,
-            "gaussian_attack_factor": 1e-3,
-            "signflip_attack_factor": -1.0,
+            "gaussian_attack_factor": null,
+            "signflip_attack_factor": null,
             "gst": 600000,
             "batch_size": 32,
             "data_config": {
