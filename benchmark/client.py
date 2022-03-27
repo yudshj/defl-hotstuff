@@ -96,14 +96,16 @@ async def start(params: ClientConfig):
     logging.info("+ fetch_timeout:      {:36s} +".format('%.2f seconds' % fetch_timeout))
     logging.info("+ gst_timeout:        {:36s} +".format('%.2f seconds' % gst_timeout))
     logging.info("+ local_train_steps:  {:36s} +".format('%d' % params['local_train_steps']))
-    logging.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    logging.info("+ save_freq:          {:36s} +".format('%d' % params['save_freq']))
+    logging.info("+ multikrum_factor:   {:36s} +".format('%d' % params['multikrum_factor']))
+    logging.info("+ num_byzantine:      {:36s} +".format('%d' % params['num_byzantine']))
+    logging.info("+ batch_size:         {:36s} +".format('%d' % params['batch_size']))
+    logging.info("+++++++++++++++++++++++++ [CLIENT] +++++++++++++++++++++++++")
     logging.info("[INIT LOOP]")
     logging.info("Current epoch id is %d.", epoch_id)
     epoch_id = await client_routine(committer, epoch_id, fetch_queue, 0, gst_timeout, trainer, callbacks,
                                     evaluate=False)
     model_save_path = "./models/{}/epoch_{:05d}.h5".format(client_name, epoch_id)
-    trainer.model.save(model_save_path)
-    logging.info("Saved model to %s", model_save_path)
 
     i = 0
     while True:
@@ -113,9 +115,10 @@ async def start(params: ClientConfig):
         logging.info("Current epoch id is %d. Waiting PASSIVE %.0f seconds...", epoch_id, fetch_timeout)
         epoch_id = await client_routine(committer, epoch_id, fetch_queue, fetch_timeout, gst_timeout, trainer,
                                         callbacks, evaluate=True)
-        model_save_path = "./models/{}/epoch_{:05d}.h5".format(client_name, epoch_id)
-        trainer.model.save(model_save_path)
-        logging.info("Saved model to %s", model_save_path)
+        if i % params['save_freq'] == 0:
+            model_save_path = "./models/{}/epoch_{:05d}.h5".format(client_name, epoch_id)
+            trainer.model.save(model_save_path)
+            logging.info("Saved model to %s", model_save_path)
 
 
 

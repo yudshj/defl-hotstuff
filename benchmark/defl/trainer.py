@@ -54,9 +54,11 @@ class Trainer:
         self.test_data = test_data
         self.agg: Type[AbstractAggregator] = aggregator
         self.num_byzantine: int = num_byzantine
-        self.init_trainable_weights: List[np.ndarray] = _get_trainable_weights(self.model)
         self.dataloader = dataloader
+
         self.dataloader.compile(self.model)
+        self.init_trainable_weights: List[np.ndarray] = _get_trainable_weights(self.model)
+
 
     def get_serialized_weights(self) -> bytes:
         return _serialize_numpy_array_list(_get_trainable_weights(self.model))
@@ -76,7 +78,7 @@ class Trainer:
             self.agg.clear_aggregator()
 
     def local_train(self, callbacks: List[tf.keras.callbacks.Callback]):
-        self.dataloader.compile(self.model)
+        # self.dataloader.compile(self.model)
         self.model.fit(self.train_data,
                        steps_per_epoch=self.local_train_steps,
                        epochs=1,

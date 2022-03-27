@@ -15,6 +15,7 @@ ClientConfig = typing.TypedDict('ClientConfig', {
     'data_config': DataConfig,
     'local_train_steps': int,
     'env': dict,
+    'save_freq': int,
 
     # ----------------------------------------- #
     'task': str,

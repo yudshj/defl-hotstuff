@@ -93,10 +93,7 @@ class Cifar10DataLoader(DataLoader):
                         kernel_initializer='he_normal',
                         activation='softmax')(y)
 
-        # instantiate and compile model
-        # orig paper uses SGD but RMSprop works better for DenseNet
         model = Model(inputs=inputs, outputs=outputs)
-        Cifar10DataLoader.compile(model)
         return model
 
     @staticmethod

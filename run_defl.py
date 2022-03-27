@@ -199,8 +199,8 @@ if __name__ == '__main__':
                 sleep(10)
         else:
             while True:
-                info('Sleeping for 10 seconds...')
-                sleep(10)
+                info('Sleeping for 30 seconds...')
+                sleep(30)
     except KeyboardInterrupt:
         print()
         warning("Keyboard interrupt detected, killing sessions...")
