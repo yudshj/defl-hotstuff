@@ -17,9 +17,8 @@ _DROPOUT = 0.6
 
 
 class Sentiment140DataLoader(DataLoader):
-    def __init__(self):
-        self.train_steps_per_epoch: int = -1
-        self.test_steps_per_epoch: int = -1
+    def __init__(self) -> None:
+        super().__init__()
 
     @staticmethod
     def gen_init_model(embedding_matrix_path: str) -> tf.keras.Model:

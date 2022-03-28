@@ -26,6 +26,11 @@ def load_array(path: str):
 
 class DataLoader(ABC):
 
+    def __init__(self) -> None:
+        super().__init__()
+        self.train_steps_per_epoch: int = -1
+        self.test_steps_per_epoch:int = -1
+
     @staticmethod
     def compile(model: Model):
         pass

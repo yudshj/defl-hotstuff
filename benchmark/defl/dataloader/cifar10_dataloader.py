@@ -16,9 +16,8 @@ _DATA_AUGMENTER = tf.keras.Sequential([
 
 
 class Cifar10DataLoader(DataLoader):
-    def __init__(self):
-        self.train_steps_per_epoch: int = -1
-        self.test_steps_per_epoch: int = -1
+    def __init__(self) -> None:
+        super().__init__()
 
     @staticmethod
     def gen_init_model() -> tf.keras.Model:

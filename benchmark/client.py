@@ -66,7 +66,7 @@ async def start(params: ClientConfig):
         raise ValueError("Unknown poisoning method.")
 
     # learning stuff
-    train_data, test_data = dataloader.load_data(params['data_config'], params['batch_size'], label_flip, repeat_train=True)
+    train_data, test_data = dataloader.load_data(params['data_config'], params['batch_size'], label_flip, repeat_train=True, shuffle_train=True, train_augmentation=True)
     logging.info("Train step_per_epoch: {}".format(dataloader.train_steps_per_epoch))
     logging.info("Test step_per_epoch: {}".format(dataloader.test_steps_per_epoch))
     model = dataloader.load_model(params['init_model_path'], use_saved_compile=False)
