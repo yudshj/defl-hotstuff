@@ -1,6 +1,6 @@
 {
     "consensus": {
-        "timeout_delay": 30000,
+        "timeout_delay": 10000,
         "sync_retry_delay": 10000
     },
     "mempool": {

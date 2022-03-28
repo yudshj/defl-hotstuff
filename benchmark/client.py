@@ -1,21 +1,19 @@
 import argparse
 import asyncio
-import json
 import gc
+import json
 import os
 import threading
 import time
 import uuid
+from typing import Optional
 
-import tensorflow as tf
-
-from defl.dataloader.dataloader import DataLoader
-from defl.aggregator import MultiKrumAggregator
+from defl.aggregator import MultiKrumAggregator, FedAvgAggregator, KrumAggregator, AbstractAggregator
 from defl.committer import IpcCommitter
 from defl.committer.ipc_committer import ObsidoResponseQueue
-from defl.dataloader import Cifar10DataLoader, Sentiment140DataLoader
+from defl.dataloader import Cifar10DataLoader, Sentiment140DataLoader, DataLoader
 from defl.trainer import Trainer
-from defl.types import *
+from defl.types import ClientConfig
 from defl.weightpoisoner import *
 from proto.defl_pb2 import Response, WeightsResponse
 
@@ -24,49 +22,61 @@ def sleep_then_info(sleep_time: float, message: str):
     time.sleep(sleep_time)
     logging.info(message)
 
-# def gpu_memory_limit(num_MB: int = 4096):
-#     gpus = tf.config.experimental.list_physical_devices('GPU')
-#     if gpus:
-#         # Restrict TensorFlow to only allocate 1GB of memory on the first GPU
-#         try:
-#             tf.config.experimental.set_virtual_device_configuration(
-#                 gpus[0],
-#                 [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=num_MB)])
-#             logical_gpus = tf.config.experimental.list_logical_devices('GPU')
-#             print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
-#         except RuntimeError as e:
-#             # Virtual devices must be set before GPUs have been initialized
-#             print(e)
-            
-# gpu_memory_limit(2500)
+
+def _get_aggregator(params: ClientConfig) -> AbstractAggregator:
+    # get aggregator type
+    if params['aggregator'] == 'multikrum':
+        return MultiKrumAggregator(params['multikrum_factor'])
+    elif params['aggregator'] == 'krum':
+        return KrumAggregator()
+    elif params['aggregator'] == 'fedavg':
+        return FedAvgAggregator()
+    else:
+        raise ValueError("Unknown aggregator {}".format(params['aggregator']))
 
 
-async def start(params: ClientConfig):
+def _get_dataloader(params: ClientConfig) -> DataLoader:
+    # get the dataloader of task
     if params['task'] == 'cifar10':
-        dataloader: DataLoader = Cifar10DataLoader()
+        return Cifar10DataLoader()
     elif params['task'] == 'sentiment140':
-        dataloader = Sentiment140DataLoader()
+        return Sentiment140DataLoader()
     else:
         raise ValueError("Unknown task {}".format(params['task']))
 
-    callbacks = []
-    label_flip = False
+
+def _get_attack_callback(params: ClientConfig) -> Optional[tf.keras.callbacks.Callback]:
+    # get attack method
     if params['attack'] == 'none':
-        pass
+        return None
     elif params['attack'] == 'gaussian':
-        assert params['gaussian_attack_factor']
-        callbacks.append(GaussianNoiseWeightPoisoner(params['gaussian_attack_factor']))
+        assert params['gaussian_attack_factor'] is not None
+        return GaussianNoiseWeightPoisoner(params['gaussian_attack_factor'])
     elif params['attack'] == 'sign':
-        assert params['signflip_attack_factor']
-        callbacks.append(SignFlipWeightPoisoner(params['signflip_attack_factor']))
+        assert params['signflip_attack_factor'] is not None
+        return SignFlipWeightPoisoner(params['signflip_attack_factor'])
     elif params['attack'] == 'label':
-        label_flip = True
-        # raise NotImplementedError("Label-flip poisoning is not implemented yet.")
+        return None
     else:
-        raise ValueError("Unknown poisoning method.")
+        raise ValueError("Unknown attack method {}".format(params['attack']))
+
+
+def _get_label_flip(params: ClientConfig) -> bool:
+    return params['attack'] == 'label'
+
+
+async def start(params: ClientConfig):
+    label_flip = _get_label_flip(params)
+    dataloader = _get_dataloader(params)
+    aggregator = _get_aggregator(params)
+    attack_callback = _get_attack_callback(params)
+
+    callbacks: List[tf.keras.callbacks.Callback] = [attack_callback] if attack_callback is not None else []
+        
 
     # learning stuff
-    train_data, test_data = dataloader.load_data(params['data_config'], params['batch_size'], label_flip, repeat_train=True, shuffle_train=True, train_augmentation=True)
+    train_data, test_data = dataloader.load_data(params['data_config'], params['batch_size'], label_flip,
+                                                 repeat_train=True, shuffle_train=True, train_augmentation=True)
     logging.info("Train step_per_epoch: {}".format(dataloader.train_steps_per_epoch))
     logging.info("Test step_per_epoch: {}".format(dataloader.test_steps_per_epoch))
     model = dataloader.load_model(params['init_model_path'], use_saved_compile=False)
@@ -75,7 +85,7 @@ async def start(params: ClientConfig):
         train_data=train_data,
         test_data=test_data,
         local_train_steps=params['local_train_steps'],
-        aggregator=MultiKrumAggregator(params['multikrum_factor']),
+        aggregator=aggregator,
         num_byzantine=params['num_byzantine'],
         dataloader=dataloader,
     )
@@ -122,7 +132,6 @@ async def start(params: ClientConfig):
             model_save_path = "./models/{}/epoch_{:05d}.h5".format(client_name, epoch_id)
             trainer.model.save(model_save_path)
             logging.info("Saved model to %s", model_save_path)
-
 
 
 async def active_fetch_after(sleep_time: float, committer):
@@ -210,7 +219,7 @@ def main():
 
     with open(args.config, 'r') as f:
         params: ClientConfig = json.load(f)
-    
+
     logging.info("Loaded json config: %s", args.config)
     logging.info("Environments: {}".format(params['env']))
     logging.info("Data config:")

@@ -9,10 +9,12 @@ DataConfig = TypedDict("DataConfig", {
     'y_val': Optional[str],
 })
 
-ATTACK_MODE = Literal["none", "gaussian", "sign", "label"]
+ATTACK_METHOD = Literal['none', 'gaussian', 'sign', 'label']
+AGGREGATOR_TYPE = Literal['krum', 'multikrum', 'fedavg']
 
 ClientConfig = TypedDict('ClientConfig', {
-    'attack': ATTACK_MODE,
+    'aggregator': AGGREGATOR_TYPE,
+    'attack': ATTACK_METHOD,
     'batch_size': int,
     'data_config': DataConfig,
     'local_train_steps': int,

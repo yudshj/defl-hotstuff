@@ -2,9 +2,10 @@
     "client_config": [
         {
             "attack": "none",
+            "aggregator": "fedavg",
             "num_byzantine": 1,
             "save_freq": 5,
-            "multikrum_factor": 2,
+            "fedavg_factor": 2,
             "gaussian_attack_factor": null,
             "signflip_attack_factor": null,
             "gst": 600000,
@@ -25,9 +26,10 @@
         },
         {
             "attack": "none",
+            "aggregator": "fedavg",
             "num_byzantine": 1,
             "save_freq": 5,
-            "multikrum_factor": 2,
+            "fedavg_factor": 2,
             "gaussian_attack_factor": null,
             "signflip_attack_factor": null,
             "gst": 600000,
@@ -48,9 +50,10 @@
         },
         {
             "attack": "none",
+            "aggregator": "fedavg",
             "num_byzantine": 1,
             "save_freq": 5,
-            "multikrum_factor": 2,
+            "fedavg_factor": 2,
             "gaussian_attack_factor": null,
             "signflip_attack_factor": null,
             "gst": 600000,
@@ -70,12 +73,13 @@
             "local_train_steps": 1000
         },
         {
-            "attack": "label",
+            "attack": "sign",
+            "aggregator": "fedavg",
             "num_byzantine": 1,
             "save_freq": 5,
-            "multikrum_factor": 2,
+            "fedavg_factor": 2,
             "gaussian_attack_factor": null,
-            "signflip_attack_factor": null,
+            "signflip_attack_factor": -1.0,
             "gst": 600000,
             "batch_size": 32,
             "data_config": {

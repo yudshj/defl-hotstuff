@@ -204,8 +204,8 @@ if __name__ == '__main__':
             total_sec = 0
             while True:
                 info(f'Slept for {total_sec} seconds...')
-                sleep(30)
-                total_sec += 30
+                sleep(50)
+                total_sec += 50
     except KeyboardInterrupt:
         print()
         warning("Keyboard interrupt detected, killing sessions...")
