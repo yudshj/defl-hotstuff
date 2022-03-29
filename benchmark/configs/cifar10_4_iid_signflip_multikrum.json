@@ -8,7 +8,7 @@
             "multikrum_factor": 2,
             "gaussian_attack_factor": null,
             "signflip_attack_factor": null,
-            "gst": 600000,
+            "gst": 500000,
             "batch_size": 32,
             "data_config": {
                 "x_test": "./benchmark/defl/data/splits/cifar10/iid_4/node-0_x_test.npz",
@@ -32,7 +32,7 @@
             "multikrum_factor": 2,
             "gaussian_attack_factor": null,
             "signflip_attack_factor": null,
-            "gst": 600000,
+            "gst": 500000,
             "batch_size": 32,
             "data_config": {
                 "x_test": "./benchmark/defl/data/splits/cifar10/iid_4/node-1_x_test.npz",
@@ -56,7 +56,7 @@
             "multikrum_factor": 2,
             "gaussian_attack_factor": null,
             "signflip_attack_factor": null,
-            "gst": 600000,
+            "gst": 500000,
             "batch_size": 32,
             "data_config": {
                 "x_test": "./benchmark/defl/data/splits/cifar10/iid_4/node-2_x_test.npz",
@@ -80,7 +80,7 @@
             "multikrum_factor": 2,
             "gaussian_attack_factor": null,
             "signflip_attack_factor": -4.0,
-            "gst": 600000,
+            "gst": 500000,
             "batch_size": 32,
             "data_config": {
                 "x_test": "./benchmark/defl/data/splits/cifar10/iid_4/node-3_x_test.npz",
