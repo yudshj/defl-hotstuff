@@ -79,7 +79,7 @@
             "save_freq": 5,
             "multikrum_factor": 2,
             "gaussian_attack_factor": null,
-            "signflip_attack_factor": -1.0,
+            "signflip_attack_factor": -4.0,
             "gst": 600000,
             "batch_size": 32,
             "data_config": {

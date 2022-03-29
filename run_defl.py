@@ -57,6 +57,10 @@ if __name__ == '__main__':
 
     num_nodes = len(client_config_list)
 
+    info("Compiling rust node...")
+    subprocess.run(['cargo', 'build', '--release', '-j8'], capture_output=False, check=True)
+    info("Compiled rust node")
+
     if os.path.exists('benchmark/node'):
         info("Found node binary in benchmark/node")
     else:
@@ -133,10 +137,6 @@ if __name__ == '__main__':
     )
     info("Compiled protobuf code")
 
-    info("Compiling rust node...")
-    subprocess.run(['cargo', 'build', '--release', '-j8'], capture_output=False, check=True)
-    info("Compiled rust node")
-
     info("Cleaning up old databases...")
     subprocess.run(['fd', '-HI', '^.db-[0-9]+$', 'benchmark', '-x', 'rm', '-rf', '{}'], capture_output=False,
                        check=True)
@@ -156,13 +156,13 @@ if __name__ == '__main__':
             json.dump(client_config, f, indent=4, sort_keys=True)
 
         client_sessions.append((
-            client_config['client_name'],
+            client_config['client_name'] + '-' + str(uuid.uuid4())[:8],
             gen_client_cmd(PYTHON_PATH, client_config['client_name'], path),
             './benchmark',
             client_config['env']))
 
         server_sessions.append((
-            client_config['server_name'],
+            client_config['server_name'] + '-' + str(uuid.uuid4())[:8],
             gen_server_cmd(NODE_PATH, id, client_config['obsido_port']),
             './benchmark',
             client_config['env']))

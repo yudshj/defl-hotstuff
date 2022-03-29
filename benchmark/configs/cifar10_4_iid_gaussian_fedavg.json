@@ -78,7 +78,7 @@
             "num_byzantine": 1,
             "save_freq": 5,
             "multikrum_factor": 2,
-            "gaussian_attack_factor": 0.03,
+            "gaussian_attack_factor": 1.0,
             "signflip_attack_factor": null,
             "gst": 600000,
             "batch_size": 32,
