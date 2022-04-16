@@ -1,22 +1,20 @@
-use std::fs;
+// use std::fs;
 
 use clap::{App, AppSettings, crate_name, crate_version, SubCommand};
 use env_logger::Env;
-use futures::future::join_all;
+// use futures::future::join_all;
 use log::error;
-use tokio::task::JoinHandle;
+// use tokio::task::JoinHandle;
 
-use consensus::Committee as ConsensusCommittee;
-use mempool::Committee as MempoolCommittee;
+// use consensus::Committee as ConsensusCommittee;
+// use mempool::Committee as MempoolCommittee;
 
-use crate::config::{Committee, Secret};
-use crate::config::Export as _;
+// use crate::config::{Committee, Secret};
+// use crate::config::Export as _;
 use crate::node::Node;
 
 mod config;
 mod node;
-
-const QUORUM_SIZE: usize = 3;
 
 #[tokio::main]
 async fn main() {
@@ -32,6 +30,7 @@ async fn main() {
         .subcommand(
             SubCommand::with_name("run")
                 .about("Runs a single node")
+                .args_from_usage("--quorum=<INT> 'The quorum size.'")
                 .args_from_usage("--obsido=<INT> 'The port that obsido use.'")
                 .args_from_usage("--keys=<FILE> 'The file containing the node keys'")
                 .args_from_usage("--committee=<FILE> 'The file containing committee information'")
@@ -71,12 +70,13 @@ async fn main() {
             let parameters_file = subm.value_of("parameters");
             let store_path = subm.value_of("store").unwrap();
             let obsido_port = subm.value_of("obsido").unwrap().parse().unwrap();
+            let quorum_size = subm.value_of("quorum").unwrap().parse().unwrap();
             match Node::new(
                 committee_file,
                 key_file,
                 store_path,
                 parameters_file,
-                QUORUM_SIZE,
+                quorum_size,
                 obsido_port
             )
                 .await
@@ -91,81 +91,81 @@ async fn main() {
                 Err(e) => error!("{}", e),
             }
         }
-        ("deploy", Some(subm)) => {
-            let nodes = subm.value_of("nodes").unwrap();
-            let obsido_port = subm.value_of("obsido").unwrap().parse().unwrap();
-            match nodes.parse::<usize>() {
-                Ok(nodes) if nodes > 1 => match deploy_testbed(nodes, obsido_port) {
-                    Ok(handles) => {
-                        let _ = join_all(handles).await;
-                    }
-                    Err(e) => error!("Failed to deploy testbed: {}", e),
-                },
-                _ => error!("The number of nodes must be a positive integer"),
-            }
-        }
+        // ("deploy", Some(subm)) => {
+        //     let nodes = subm.value_of("nodes").unwrap();
+        //     let obsido_port = subm.value_of("obsido").unwrap().parse().unwrap();
+        //     match nodes.parse::<usize>() {
+        //         Ok(nodes) if nodes > 1 => match deploy_testbed(nodes, obsido_port) {
+        //             Ok(handles) => {
+        //                 let _ = join_all(handles).await;
+        //             }
+        //             Err(e) => error!("Failed to deploy testbed: {}", e),
+        //         },
+        //         _ => error!("The number of nodes must be a positive integer"),
+        //     }
+        // }
         _ => unreachable!(),
     }
 }
 
-fn deploy_testbed(nodes: usize, obsido_port: u16) -> Result<Vec<JoinHandle<()>>, Box<dyn std::error::Error>> {
-    let keys: Vec<_> = (0..nodes).map(|_| Secret::new()).collect();
+// fn deploy_testbed(nodes: usize, obsido_port: u16) -> Result<Vec<JoinHandle<()>>, Box<dyn std::error::Error>> {
+//     let keys: Vec<_> = (0..nodes).map(|_| Secret::new()).collect();
 
-    // Print the committee file.
-    let epoch = 1;
-    let mempool_committee = MempoolCommittee::new(
-        keys.iter()
-            .enumerate()
-            .map(|(i, key)| {
-                let name = key.name;
-                let stake = 1;
-                let front = format!("127.0.0.1:{}", 25_000 + i).parse().unwrap();
-                let mempool = format!("127.0.0.1:{}", 25_100 + i).parse().unwrap();
-                (name, stake, front, mempool)
-            })
-            .collect(),
-        epoch,
-    );
-    let consensus_committee = ConsensusCommittee::new(
-        keys.iter()
-            .enumerate()
-            .map(|(i, key)| {
-                let name = key.name;
-                let stake = 1;
-                let addresses = format!("127.0.0.1:{}", 25_200 + i).parse().unwrap();
-                (name, stake, addresses)
-            })
-            .collect(),
-        epoch,
-    );
-    let committee_file = "committee.json";
-    let _ = fs::remove_file(committee_file);
-    Committee {
-        mempool: mempool_committee,
-        consensus: consensus_committee,
-    }
-    .write(committee_file)?;
+//     // Print the committee file.
+//     let epoch = 1;
+//     let mempool_committee = MempoolCommittee::new(
+//         keys.iter()
+//             .enumerate()
+//             .map(|(i, key)| {
+//                 let name = key.name;
+//                 let stake = 1;
+//                 let front = format!("127.0.0.1:{}", 25_000 + i).parse().unwrap();
+//                 let mempool = format!("127.0.0.1:{}", 25_100 + i).parse().unwrap();
+//                 (name, stake, front, mempool)
+//             })
+//             .collect(),
+//         epoch,
+//     );
+//     let consensus_committee = ConsensusCommittee::new(
+//         keys.iter()
+//             .enumerate()
+//             .map(|(i, key)| {
+//                 let name = key.name;
+//                 let stake = 1;
+//                 let addresses = format!("127.0.0.1:{}", 25_200 + i).parse().unwrap();
+//                 (name, stake, addresses)
+//             })
+//             .collect(),
+//         epoch,
+//     );
+//     let committee_file = "committee.json";
+//     let _ = fs::remove_file(committee_file);
+//     Committee {
+//         mempool: mempool_committee,
+//         consensus: consensus_committee,
+//     }
+//     .write(committee_file)?;
 
-    // Write the key files and spawn all nodes.
-    keys.iter()
-        .enumerate()
-        .map(|(i, keypair)| {
-            let key_file = format!("node_{}.json", i);
-            let _ = fs::remove_file(&key_file);
-            keypair.write(&key_file)?;
+//     // Write the key files and spawn all nodes.
+//     keys.iter()
+//         .enumerate()
+//         .map(|(i, keypair)| {
+//             let key_file = format!("node_{}.json", i);
+//             let _ = fs::remove_file(&key_file);
+//             keypair.write(&key_file)?;
 
-            let store_path = format!("db_{}", i);
-            let _ = fs::remove_dir_all(&store_path);
+//             let store_path = format!("db_{}", i);
+//             let _ = fs::remove_dir_all(&store_path);
 
-            Ok(tokio::spawn(async move {
-                match Node::new(committee_file, &key_file, &store_path, None, QUORUM_SIZE, obsido_port).await {
-                    Ok(mut node) => {
-                        // Sink the commit channel.
-                        while node.commit.recv().await.is_some() {}
-                    }
-                    Err(e) => error!("{}", e),
-                }
-            }))
-        })
-        .collect::<Result<_, Box<dyn std::error::Error>>>()
-}
+//             Ok(tokio::spawn(async move {
+//                 match Node::new(committee_file, &key_file, &store_path, None, quorum_size, obsido_port).await {
+//                     Ok(mut node) => {
+//                         // Sink the commit channel.
+//                         while node.commit.recv().await.is_some() {}
+//                     }
+//                     Err(e) => error!("{}", e),
+//                 }
+//             }))
+//         })
+//         .collect::<Result<_, Box<dyn std::error::Error>>>()
+// }

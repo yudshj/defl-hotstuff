@@ -7,7 +7,6 @@ PYTHON_PATH = os.path.abspath(PYTHON_PATH)
 NODE_PATH = os.path.abspath('./benchmark/node')
 
 import argparse
-import copy
 import json
 import logging
 import subprocess
@@ -27,9 +26,10 @@ def gen_client_cmd(python_path: str, client_name: str, client_config_path: str):
     )
 
 
-def gen_server_cmd(rust_node_path: str, id: int, obsido_port: int):
+def gen_server_cmd(rust_node_path: str, id: int, obsido_port: int, quorum_size: int):
     return (
         f"{rust_node_path} -vv run "
+        f"--quorum {quorum_size} "
         f"--obsido {obsido_port} "
         f"--keys .node-{id}.json "
         f"--committee .committee.json "
@@ -54,6 +54,9 @@ if __name__ == '__main__':
 
     node_params_json_path = os.path.abspath(conf["node_params_path"])
     init_model_path = os.path.abspath(conf["init_model_path"])
+    
+    quorum_size = conf["quorum_size"]
+    assert type(quorum_size) == int
 
     num_nodes = len(client_config_list)
 
@@ -163,7 +166,7 @@ if __name__ == '__main__':
 
         server_sessions.append((
             client_config['server_name'] + '-' + str(uuid.uuid4())[:8],
-            gen_server_cmd(NODE_PATH, id, client_config['obsido_port']),
+            gen_server_cmd(NODE_PATH, id, client_config['obsido_port'], quorum_size=quorum_size),
             './benchmark',
             client_config['env']))
         
