@@ -146,7 +146,7 @@ async def active_fetch_after(sleep_time: float, committer):
     await committer.fetch_w_last()
 
 
-async def client_routine(committer, epoch_id, fetch_queue: ObsidoResponseQueue, fetch_timeout, gst_timeout: float,
+async def client_routine(committer: IpcCommitter, epoch_id, fetch_queue: ObsidoResponseQueue, fetch_timeout, gst_timeout: float,
                          trainer: Trainer, callbacks: List[tf.keras.callbacks.Callback], evaluate: bool = True):
     active_fetch_task = asyncio.create_task(active_fetch_after(fetch_timeout, committer))
     fetch_resp: WeightsResponse = await fetch_queue.drain()

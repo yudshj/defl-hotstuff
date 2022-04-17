@@ -1,7 +1,8 @@
 [package]
 name = "obsido"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
+authors = ["Yudong Han <maghsk2017@gmail.com>"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -10,7 +11,7 @@ bytes = "1.1.0"
 async-trait = "0.1.50"
 log = "0.4.14"
 futures = "0.3.14"
-prost = "0.9.0"
+prost = "0.10"
 uuid = { version = "0.8.2", features = ["v4"] }
 tokio = { version = "1.5.0", features = ["sync", "rt", "macros"] }
 

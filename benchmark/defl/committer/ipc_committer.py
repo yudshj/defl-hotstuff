@@ -23,12 +23,12 @@ class IpcCommitter:
         self.listen_backlog = listen_backlog
 
         # async net stuff
-        self.passive_server = None
-        self.active_server = None
-        self.replica_tx: Optional[StreamWriter] = None
-        self.replica_rx: Optional[StreamReader] = None
-        self.obsido_tx: Optional[StreamWriter] = None
-        self.obsido_rx: Optional[StreamReader] = None
+        self.passive_server
+        self.active_server
+        self.replica_tx: StreamWriter
+        self.replica_rx: StreamReader
+        self.obsido_tx: StreamWriter
+        self.obsido_rx: StreamReader
         self.codec = LengthDelimitedCodec(8)
         self.fetch_queue = fetch_queue
 
@@ -70,14 +70,15 @@ class IpcCommitter:
             logging.debug(f'Received {len(resp)} bytes')
             response = Response()
             response.ParseFromString(resp)
-            logging.debug(
-                f'HANDLE [{response.request_uuid}] {Response.Status.Name(response.stat)}\n\tresponse_uuid={response.response_uuid}')
+            logging.debug(f'HANDLE [{response.request_uuid}] {Response.Status.Name(response.stat)}\tresponse_uuid={response.response_uuid}')
+            logging.debug("acquiring `self.__response_map_lock`")
             async with self.__response_map_lock:
                 if response.request_uuid in self.__response_map:
                     queue = self.__response_map[response.request_uuid]
                     del self.__response_map[response.request_uuid]
                 else:
                     logging.warning(f'Received response for unknown request {response.request_uuid}')
+            logging.debug("released `self.__response_map_lock`")
             await queue.put(response)
 
     async def handle_passive(self, reader: StreamReader, writer: StreamWriter):
@@ -91,11 +92,15 @@ class IpcCommitter:
 
     async def collect(self, client_request_uuid) -> Response:
         request_uuid = client_request_uuid
-        response_queue = Queue(1)
+        response_queue: Queue = Queue(1)
+        logging.debug("acquiring `self.__response_map_lock`")
         async with self.__response_map_lock:
             self.__response_map[request_uuid] = response_queue
+        logging.debug("released `self.__response_map_lock`")
+        logging.debug(f'Waiting for response for {request_uuid} by queue.get()')
         response: Response = await response_queue.get()
         assert type(response) == Response
+        logging.debug(f'COLLECT [{response.request_uuid}] {Response.Status.Name(response.stat)}\tresponse_uuid={response.response_uuid}')
         return response
 
     async def client_register(self) -> bool:
@@ -153,9 +158,11 @@ class IpcCommitter:
         try:
             return await self.collect(client_request.request_uuid)
         except asyncio.CancelledError:
+            logging.debug("acquiring `self.__response_map_lock`")
             async with self.__response_map_lock:
                 if client_request.request_uuid in self.__response_map:
                     del self.__response_map[client_request.request_uuid]
+            logging.debug("released `self.__response_map_lock`")
 
     async def new_epoch_vote(self, target_epoch_id: int) -> Response:
         client_request = ClientRequest(
@@ -174,9 +181,11 @@ class IpcCommitter:
         try:
             return await self.collect(client_request.request_uuid)
         except asyncio.CancelledError:
+            logging.debug("acquiring `self.__response_map_lock`")
             async with self.__response_map_lock:
                 if client_request.request_uuid in self.__response_map:
                     del self.__response_map[client_request.request_uuid]
+            logging.debug("released `self.__response_map_lock`")
 
 
 class ObsidoResponseQueue(asyncio.Queue):
