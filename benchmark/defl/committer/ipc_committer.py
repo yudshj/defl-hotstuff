@@ -23,12 +23,12 @@ class IpcCommitter:
         self.listen_backlog = listen_backlog
 
         # async net stuff
-        self.passive_server
-        self.active_server
-        self.replica_tx: StreamWriter
-        self.replica_rx: StreamReader
-        self.obsido_tx: StreamWriter
-        self.obsido_rx: StreamReader
+        self.passive_server = None
+        self.active_server = None
+        self.replica_tx: StreamWriter = None
+        self.replica_rx: StreamReader = None
+        self.obsido_tx: StreamWriter = None
+        self.obsido_rx: StreamReader = None
         self.codec = LengthDelimitedCodec(8)
         self.fetch_queue = fetch_queue
 
