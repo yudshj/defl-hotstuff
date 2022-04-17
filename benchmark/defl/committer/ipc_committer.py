@@ -2,7 +2,7 @@ import asyncio
 import logging
 import uuid
 from asyncio import Queue, StreamReader, StreamWriter
-from typing import Dict
+from typing import Dict, Optional
 
 from defl.committer.utils import LengthDelimitedCodec
 from proto.defl_pb2 import ClientRequest, Response, RegisterInfo, WeightsResponse, ObsidoRequest
@@ -90,7 +90,7 @@ class IpcCommitter:
             logging.debug(f'LAST_WEIGHTS HANDLE [{response.response_uuid}]')
             await self.fetch_queue.put(response)
 
-    async def collect(self, client_request_uuid) -> Response:
+    async def collect(self, client_request_uuid) -> Optional[Response]:
         request_uuid = client_request_uuid
         response_queue: Queue = Queue(1)
         logging.debug("acquiring `self.__response_map_lock`")
@@ -136,12 +136,14 @@ class IpcCommitter:
         )
         try:
             assert await self.transmit(client_request, self.obsido_tx, self.obsido_rx)
+        except AssertionError:
+            logging.error('Failed to transmit FETCH_W_LAST')
         except asyncio.CancelledError:
             self.obsido_tx.close()
             await self.obsido_tx.wait_closed()
             self.obsido_rx, self.obsido_tx = await asyncio.open_connection(self.server_host, self.obsido_port)
 
-    async def update_weights(self, target_epoch_id: int, weights_b: bytes) -> Response:
+    async def update_weights(self, target_epoch_id: int, weights_b: bytes) -> Optional[Response]:
         client_request = ClientRequest(
             method=ClientRequest.Method.UPD_WEIGHTS,
             request_uuid=str(uuid.uuid4()),
@@ -151,6 +153,9 @@ class IpcCommitter:
         )
         try:
             assert await self.transmit(client_request, self.replica_tx, self.replica_rx)
+        except AssertionError:
+            logging.error('Failed to transmit UPD_WEIGHTS')
+            return None
         except asyncio.CancelledError:
             self.replica_tx.close()
             await self.replica_tx.wait_closed()
@@ -163,8 +168,9 @@ class IpcCommitter:
                 if client_request.request_uuid in self.__response_map:
                     del self.__response_map[client_request.request_uuid]
             logging.debug("released `self.__response_map_lock`")
+            return None
 
-    async def new_epoch_vote(self, target_epoch_id: int) -> Response:
+    async def new_epoch_vote(self, target_epoch_id: int) -> Optional[Response]:
         client_request = ClientRequest(
             method=ClientRequest.Method.NEW_EPOCH_VOTE,
             request_uuid=str(uuid.uuid4()),
@@ -174,6 +180,9 @@ class IpcCommitter:
         )
         try:
             assert await self.transmit(client_request, self.replica_tx, self.replica_rx)
+        except AssertionError:
+            logging.error('Failed to transmit NEW_EPOCH_VOTE')
+            return None
         except asyncio.CancelledError:
             self.replica_tx.close()
             await self.replica_tx.wait_closed()
@@ -186,6 +195,7 @@ class IpcCommitter:
                 if client_request.request_uuid in self.__response_map:
                     del self.__response_map[client_request.request_uuid]
             logging.debug("released `self.__response_map_lock`")
+            return None
 
 
 class ObsidoResponseQueue(asyncio.Queue):

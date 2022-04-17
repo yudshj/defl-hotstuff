@@ -197,6 +197,9 @@ async def client_routine(committer: IpcCommitter, epoch_id, fetch_queue: ObsidoR
     # send weights
     logging.info("Updating weights...")
     upd_weight_resp = await committer.update_weights(next_epoch_id, cur_weights)
+    if upd_weight_resp is None:
+        logging.critical("[ERROR] Updating weights failed!")
+        return epoch_id
     logging.debug(f'Collected: {Response.Status.Name(upd_weight_resp.stat)} with {upd_weight_resp.ByteSize()} bytes')
     # if upd_weight_resp.stat == Response.Status.OK:
     #     last_weights_to_check = cur_weights
@@ -208,6 +211,9 @@ async def client_routine(committer: IpcCommitter, epoch_id, fetch_queue: ObsidoR
     # vote for new epoch
     logging.info("Voting new epoch %d...", next_epoch_id)
     new_epoch_resp = await committer.new_epoch_vote(next_epoch_id)
+    if new_epoch_resp is None:
+        logging.critical("[ERROR] Voting new epoch failed!")
+        return epoch_id
     logging.debug(f'Collected: {Response.Status.Name(new_epoch_resp.stat)} with {new_epoch_resp.ByteSize()} bytes')
     # assert r.stat == Response.Status.OK or r.stat == Response.Status.NOT_MEET_QUORUM_WAIT
 
