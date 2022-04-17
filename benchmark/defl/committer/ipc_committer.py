@@ -2,7 +2,7 @@ import asyncio
 import logging
 import uuid
 from asyncio import Queue, StreamReader, StreamWriter
-from typing import Dict, Optional
+from typing import Dict
 
 from defl.committer.utils import LengthDelimitedCodec
 from proto.defl_pb2 import ClientRequest, Response, RegisterInfo, WeightsResponse, ObsidoRequest
@@ -23,12 +23,12 @@ class IpcCommitter:
         self.listen_backlog = listen_backlog
 
         # async net stuff
-        self.passive_server = None
-        self.active_server = None
-        self.replica_tx: StreamWriter = None
-        self.replica_rx: StreamReader = None
-        self.obsido_tx: StreamWriter = None
-        self.obsido_rx: StreamReader = None
+        self.passive_server: asyncio.base_events.Server
+        self.active_server: asyncio.base_events.Server
+        self.replica_tx: StreamWriter
+        self.replica_rx: StreamReader
+        self.obsido_tx: StreamWriter
+        self.obsido_rx: StreamReader
         self.codec = LengthDelimitedCodec(8)
         self.fetch_queue = fetch_queue
 
