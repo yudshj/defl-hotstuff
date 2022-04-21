@@ -35,6 +35,23 @@ class IpcCommitter:
         # async sync stuff
         self.__response_map: Dict[str, Queue] = {}
         self.__response_map_lock = asyncio.Lock()
+    
+    async def clear_session(self):
+        self.obsido_tx.close()
+        await self.obsido_tx.wait_closed()
+        self.obsido_rx, self.obsido_tx = await asyncio.open_connection(self.server_host, self.obsido_port)
+
+        self.replica_tx.close()
+        await self.replica_tx.wait_closed()
+        self.replica_rx, self.replica_tx = await asyncio.open_connection(self.server_host, self.consensus_port)
+
+        async with self.__response_map_lock:
+            logging.critical("Response map: %s", self.__response_map)
+            # clear the map
+            for v in self.__response_map.values():
+                del v
+            self.__response_map.clear()
+            logging.critical("Response map: %s", self.__response_map)
 
     async def start_servers(self):
         logging.info('Starting active server')

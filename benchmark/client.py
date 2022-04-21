@@ -136,6 +136,7 @@ async def start(params: ClientConfig):
             epoch_id = await asyncio.wait_for(client_routine(committer, epoch_id, fetch_queue, fetch_timeout, gst_timeout, trainer, callbacks, evaluate=True), timeout=gst_timeout * 2.5)
         except asyncio.TimeoutError:
             logging.critical("TIMEOUT FOR CLIENT ROUTINE! POSSIBLY A DEADLOCK OCCURRED.")
+            await committer.clear_session()
             continue
 
         if i % params['save_freq'] == 0:
@@ -204,7 +205,7 @@ async def client_routine(committer: IpcCommitter, epoch_id, fetch_queue: ObsidoR
     # if upd_weight_resp.stat == Response.Status.OK:
     #     last_weights_to_check = cur_weights
 
-    # wait_for_GST
+    # wait for GST
     logging.info("Waiting for GST...")
     gst_event.join()
 
