@@ -139,7 +139,7 @@ async def start(params: ClientConfig):
             await committer.clear_session()
             continue
 
-        if i % params['save_freq'] == 0:
+        if epoch_id % params['save_freq'] == 0:
             model_save_path = "./models/{}/epoch_{:05d}.h5".format(client_name, epoch_id)
             trainer.model.save(model_save_path)
             logging.info("Saved model to %s", model_save_path)
