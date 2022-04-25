@@ -76,7 +76,7 @@ async def start(params: ClientConfig):
 
     # learning stuff
     train_data, test_data = dataloader.load_data(params['data_config'], params['batch_size'], label_flip,
-                                                 repeat_train=True, shuffle_train=True, train_augmentation=True)
+                                                 repeat_train=True, shuffle_train=True)
     logging.info("Train step_per_epoch: {}".format(dataloader.train_steps_per_epoch))
     logging.info("Test step_per_epoch: {}".format(dataloader.test_steps_per_epoch))
     model = dataloader.load_model(params['init_model_path'], use_saved_compile=False)
@@ -122,9 +122,9 @@ async def start(params: ClientConfig):
     logging.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
     logging.info("[INIT LOOP]")
     logging.info("Current epoch id is %d.", epoch_id)
-    epoch_id = await client_routine(committer, epoch_id, fetch_queue, 0, gst_timeout, trainer, callbacks,
-                                    evaluate=False)
+    epoch_id = await client_routine(committer, epoch_id, fetch_queue, 0, gst_timeout, trainer, callbacks, evaluate=False)
     model_save_path = "./models/{}/epoch_{:05d}.h5".format(client_name, epoch_id)
+    save_freq: int = params['save_freq']
 
     i = 0
     while True:
@@ -139,7 +139,7 @@ async def start(params: ClientConfig):
             await committer.clear_session()
             continue
 
-        if epoch_id % params['save_freq'] == 0:
+        if epoch_id % save_freq == 0:
             model_save_path = "./models/{}/epoch_{:05d}.h5".format(client_name, epoch_id)
             trainer.model.save(model_save_path)
             logging.info("Saved model to %s", model_save_path)
