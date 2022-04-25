@@ -75,52 +75,50 @@ class IpcCommitter:
         return resp == 'Ack'
 
     async def handle_active(self, reader: StreamReader, writer: StreamWriter):
-        while True:
-            try:
-                resp = await self.codec.async_length_delimited_recv(reader)
-            except IncompleteReadError:
-                # What the fuck with asyncio?
-                logging.warning('Incomplete read, closing writer...')
-                break
+        try:
+            resp = await self.codec.async_length_delimited_recv(reader)
+        except IncompleteReadError:
+            # What the fuck with asyncio?
+            logging.warning('Incomplete read, closing writer...')
+            writer.close()
+            await writer.wait_closed()
+            return
 
-            logging.info(f'Received {len(resp)} bytes')
-            response = Response()
-            response.ParseFromString(resp)
-            logging.debug(f'HANDLE [{response.request_uuid}] {Response.Status.Name(response.stat)}\tresponse_uuid={response.response_uuid}')
-            logging.debug("acquiring `self.__response_map_lock`")
-            async with self.__response_map_lock:
-                if response.request_uuid in self.__response_map:
-                    queue = self.__response_map[response.request_uuid]
-                    del self.__response_map[response.request_uuid]
-                else:
-                    logging.warning(f'Received response for unknown request {response.request_uuid}')
-            logging.debug("released `self.__response_map_lock`")
-            await queue.put(response)
-            pass
+        logging.info(f'Received {len(resp)} bytes')
+        response = Response()
+        response.ParseFromString(resp)
+        logging.debug(f'HANDLE [{response.request_uuid}] {Response.Status.Name(response.stat)}\tresponse_uuid={response.response_uuid}')
+        logging.debug("acquiring `self.__response_map_lock`")
+        async with self.__response_map_lock:
+            if response.request_uuid in self.__response_map:
+                queue = self.__response_map[response.request_uuid]
+                del self.__response_map[response.request_uuid]
+            else:
+                logging.warning(f'Received response for unknown request {response.request_uuid}')
+        logging.debug("released `self.__response_map_lock`")
+        await queue.put(response)
 
         writer.close()
         await writer.wait_closed()
-        await asyncio.sleep(0.1)
 
     async def handle_passive(self, reader: StreamReader, writer: StreamWriter):
-        while True:
-            try:
-                resp = await self.codec.async_length_delimited_recv(reader)
-            except IncompleteReadError:
-                # What the fuck with asyncio?
-                logging.warning('LAST_WEIGHTS Incomplete read, closing writer...')
-                break
+        try:
+            resp = await self.codec.async_length_delimited_recv(reader)
+        except IncompleteReadError:
+            # What the fuck with asyncio?
+            logging.warning('LAST_WEIGHTS Incomplete read, closing writer...')
+            writer.close()
+            await writer.wait_closed()
+            return
 
-            logging.info(f'LAST_WEIGHTS Received {len(resp)} bytes')
-            response = WeightsResponse()
-            response.ParseFromString(resp)
-            logging.debug(f'LAST_WEIGHTS HANDLE [{response.response_uuid}]')
-            await self.fetch_queue.put(response)
-            pass
+        logging.info(f'LAST_WEIGHTS Received {len(resp)} bytes')
+        response = WeightsResponse()
+        response.ParseFromString(resp)
+        logging.debug(f'LAST_WEIGHTS HANDLE [{response.response_uuid}]')
+        await self.fetch_queue.put(response)
 
         writer.close()
         await writer.wait_closed()
-        await asyncio.sleep(0.1)
 
     async def collect(self, client_request_uuid) -> Optional[Response]:
         request_uuid = client_request_uuid

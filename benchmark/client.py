@@ -136,7 +136,7 @@ async def start(params: ClientConfig):
             epoch_id = await asyncio.wait_for(client_routine(committer, epoch_id, fetch_queue, fetch_timeout, gst_timeout, trainer, callbacks, evaluate=True), timeout=gst_timeout * 2.5)
         except asyncio.TimeoutError:
             logging.critical("TIMEOUT FOR CLIENT ROUTINE! POSSIBLY A DEADLOCK OCCURRED.")
-            await committer.clear_session()
+            # await committer.clear_session()
             continue
 
         if epoch_id % save_freq == 0:
