@@ -79,11 +79,14 @@ class IpcCommitter:
             try:
                 resp = await self.codec.async_length_delimited_recv(reader)
             except IncompleteReadError:
-                logging.warning('Incomplete read, retrying...')
+                # What the fuck with asyncio?
+                logging.warning('Incomplete read, closing writer...')
+                writer.close()
+                await writer.wait_closed()
                 await asyncio.sleep(0.1)
                 continue
 
-            logging.debug(f'Received {len(resp)} bytes')
+            logging.info(f'Received {len(resp)} bytes')
             response = Response()
             response.ParseFromString(resp)
             logging.debug(f'HANDLE [{response.request_uuid}] {Response.Status.Name(response.stat)}\tresponse_uuid={response.response_uuid}')
@@ -102,8 +105,12 @@ class IpcCommitter:
             try:
                 resp = await self.codec.async_length_delimited_recv(reader)
             except IncompleteReadError:
-                logging.warning('LAST_WEIGHTS Incomplete read, retrying...')
+                # What the fuck with asyncio?
+                logging.warning('LAST_WEIGHTS Incomplete read, closing writer...')
+                writer.close()
+                await writer.wait_closed()
                 await asyncio.sleep(0.1)
+                continue
 
             logging.info(f'LAST_WEIGHTS Received {len(resp)} bytes')
             response = WeightsResponse()
