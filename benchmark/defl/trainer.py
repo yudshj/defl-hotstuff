@@ -57,6 +57,7 @@ class Trainer:
         self.dataloader = dataloader
 
         self.dataloader.compile(self.model)
+        self.metric_names = self.model.metrics_names
         self.init_trainable_weights: List[np.ndarray] = _get_trainable_weights(self.model)
 
 

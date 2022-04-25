@@ -183,7 +183,7 @@ async def client_routine(committer: IpcCommitter, epoch_id: int, fetch_queue: Ob
     if evaluate:
         logging.info("Evaluating...")
         score = trainer.evaluate()
-        logging.info('[AGGREGATED] loss: {0[0]}, accuracy: {0[1]}'.format(score))
+        logging.info('[AGGREGATED] metric_names: %s, metric_values: %s', str(trainer.metric_names), str(score))
 
     # local_train
     logging.info("Local training...")

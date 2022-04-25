@@ -50,7 +50,7 @@ class Sentiment140DataLoader(DataLoader):
         model.compile(
             optimizer=tfa.optimizers.AdamW(weight_decay=_WEIGHT_DECAY, learning_rate=_LR),
             loss=tf.keras.losses.BinaryCrossentropy(),
-            metrics=[tf.keras.metrics.BinaryAccuracy()],
+            metrics=[tf.keras.metrics.BinaryAccuracy(), tf.keras.metrics.AUC()],
         )
 
     @staticmethod
