@@ -81,10 +81,7 @@ class IpcCommitter:
             except IncompleteReadError:
                 # What the fuck with asyncio?
                 logging.warning('Incomplete read, closing writer...')
-                writer.close()
-                await writer.wait_closed()
-                await asyncio.sleep(0.1)
-                continue
+                break
 
             logging.info(f'Received {len(resp)} bytes')
             response = Response()
@@ -99,6 +96,11 @@ class IpcCommitter:
                     logging.warning(f'Received response for unknown request {response.request_uuid}')
             logging.debug("released `self.__response_map_lock`")
             await queue.put(response)
+            pass
+
+        writer.close()
+        await writer.wait_closed()
+        await asyncio.sleep(0.1)
 
     async def handle_passive(self, reader: StreamReader, writer: StreamWriter):
         while True:
@@ -107,16 +109,18 @@ class IpcCommitter:
             except IncompleteReadError:
                 # What the fuck with asyncio?
                 logging.warning('LAST_WEIGHTS Incomplete read, closing writer...')
-                writer.close()
-                await writer.wait_closed()
-                await asyncio.sleep(0.1)
-                continue
+                break
 
             logging.info(f'LAST_WEIGHTS Received {len(resp)} bytes')
             response = WeightsResponse()
             response.ParseFromString(resp)
             logging.debug(f'LAST_WEIGHTS HANDLE [{response.response_uuid}]')
             await self.fetch_queue.put(response)
+            pass
+
+        writer.close()
+        await writer.wait_closed()
+        await asyncio.sleep(0.1)
 
     async def collect(self, client_request_uuid) -> Optional[Response]:
         request_uuid = client_request_uuid
