@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import uuid
-from asyncio import Queue, StreamReader, StreamWriter
+from asyncio import IncompleteReadError, Queue, StreamReader, StreamWriter
 from typing import Dict, Optional
 
 from defl.committer.utils import LengthDelimitedCodec
@@ -35,7 +35,7 @@ class IpcCommitter:
         # async sync stuff
         self.__response_map: Dict[str, Queue] = {}
         self.__response_map_lock = asyncio.Lock()
-    
+
     async def clear_session(self):
         self.obsido_tx.close()
         await self.obsido_tx.wait_closed()
@@ -52,13 +52,6 @@ class IpcCommitter:
                 del v
             self.__response_map.clear()
             logging.critical("Response map: %s", self.__response_map)
-
-    async def start_servers(self):
-        logging.info('Starting active server')
-        self.active_server = await asyncio.start_server(self.handle_active, '127.0.0.1', 0)
-        logging.info('Starting passive server')
-        self.passive_server = await asyncio.start_server(self.handle_passive, '127.0.0.1', 0)
-        logging.info('Started servers')
 
     async def connect_to_server(self):
         while True:
@@ -83,7 +76,13 @@ class IpcCommitter:
 
     async def handle_active(self, reader: StreamReader, writer: StreamWriter):
         while True:
-            resp = await self.codec.async_length_delimited_recv(reader)
+            try:
+                resp = await self.codec.async_length_delimited_recv(reader)
+            except IncompleteReadError:
+                logging.warning('Incomplete read, retrying...')
+                await asyncio.sleep(0.1)
+                continue
+
             logging.debug(f'Received {len(resp)} bytes')
             response = Response()
             response.ParseFromString(resp)
@@ -100,7 +99,12 @@ class IpcCommitter:
 
     async def handle_passive(self, reader: StreamReader, writer: StreamWriter):
         while True:
-            resp = await self.codec.async_length_delimited_recv(reader)
+            try:
+                resp = await self.codec.async_length_delimited_recv(reader)
+            except IncompleteReadError:
+                logging.warning('LAST_WEIGHTS Incomplete read, retrying...')
+                await asyncio.sleep(0.1)
+
             logging.info(f'LAST_WEIGHTS Received {len(resp)} bytes')
             response = WeightsResponse()
             response.ParseFromString(resp)
@@ -126,7 +130,7 @@ class IpcCommitter:
             request_uuid=str(uuid.uuid4()),
             register_info=RegisterInfo(
                 host='127.0.0.1',
-                port=self.active_server.sockets[0].getsockname()[1],  # active_sock.getsockname()[1],
+                port=self.active_server.sockets[0].getsockname()[1],
                 pasv_host='127.0.0.1',
                 pasv_port=self.passive_server.sockets[0].getsockname()[1],
             ),
@@ -136,9 +140,12 @@ class IpcCommitter:
 
     async def committer_bootstrap(self) -> bool:
         """Return if the client is successfully registered to the server"""
-        await asyncio.wait((
-            asyncio.create_task(self.connect_to_server()),
-            asyncio.create_task(self.start_servers())), return_when=asyncio.ALL_COMPLETED)
+        await self.connect_to_server()
+
+        # starting servers
+        self.active_server = await asyncio.start_server(self.handle_active, '127.0.0.1', 0)
+        self.passive_server = await asyncio.start_server(self.handle_passive, '127.0.0.1', 0)
+        logging.info('Started servers')
 
         asyncio.create_task(self.active_server.serve_forever())
         asyncio.create_task(self.passive_server.serve_forever())
