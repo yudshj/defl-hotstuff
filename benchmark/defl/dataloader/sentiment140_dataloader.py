@@ -12,7 +12,7 @@ _LR = 1e-3
 _SEQUENCE_LENGTH = 60
 _LSTM_SIZE = 128
 _KEY_DIM = 256
-_WEIGHT_DECAY = 3e-4
+_WEIGHT_DECAY = 1e-3
 _DROPOUT = 0.6
 
 
@@ -50,7 +50,7 @@ class Sentiment140DataLoader(DataLoader):
         model.compile(
             optimizer=tfa.optimizers.AdamW(weight_decay=_WEIGHT_DECAY, learning_rate=_LR),
             loss=tf.keras.losses.BinaryCrossentropy(),
-            metrics=[tf.keras.metrics.BinaryAccuracy()],
+            metrics=[tf.keras.metrics.BinaryAccuracy(), tf.keras.metrics.AUC()],
         )
 
     @staticmethod

@@ -161,9 +161,10 @@ async def client_routine(committer: LocalCommitter, epoch_id, fetch_timeout, gst
     # if last_weights_to_check is not None:
     #     assert fetch_resp.w_last[client_name] == last_weights_to_check
     #     logging.info("REMOTE LAST_WEIGHTS OF THE CLIENT ARE THE SAME AS LOCAL LAST_WEIGHTS")
-    logging.info("Creating GST event...")
-    gst_event = threading.Thread(target=sleep_then_info, args=(gst_timeout, "GST arrived."))
-    gst_event.start()
+    if gst_timeout > 0:
+        logging.info("Creating GST event...")
+        gst_event = threading.Thread(target=sleep_then_info, args=(gst_timeout, "GST arrived."))
+        gst_event.start()
 
     # aggregate weights
     logging.info("Aggregating weights...")
@@ -173,7 +174,9 @@ async def client_routine(committer: LocalCommitter, epoch_id, fetch_timeout, gst
     if evaluate:
         logging.info("Evaluating...")
         score = trainer.evaluate()
-        logging.info('[AGGREGATED] metric_names: %s, metric_values: %s', str(trainer.get_metrics_names()), str(score))
+        metrics = {k: v for k, v in zip(trainer.get_metrics_names(), score)}
+        json_one_line = json.dumps(metrics, separators=(',', ':'))
+        logging.info('[AGGREGATED] %s', json_one_line)
 
     # local_train
     logging.info("Local training...")
@@ -196,8 +199,9 @@ async def client_routine(committer: LocalCommitter, epoch_id, fetch_timeout, gst
     #     last_weights_to_check = cur_weights
 
     # wait for GST
-    logging.info("Waiting for GST...")
-    gst_event.join()
+    if gst_timeout > 0:
+        logging.info("Waiting for GST...")
+        gst_event.join()
 
     # vote for new epoch
     logging.info("Voting new epoch %d...", next_epoch_id)

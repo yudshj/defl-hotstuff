@@ -186,11 +186,12 @@ if __name__ == '__main__':
             './benchmark',
             client_config['env']))
 
-        server_sessions.append((
-            client_config['server_name'] + '-' + str(uuid.uuid4())[:8],
-            gen_server_cmd(NODE_PATH, id, client_config['obsido_port'], quorum_size=quorum_size),
-            './benchmark',
-            client_config['env']))
+        # LOCAL Running
+        # server_sessions.append((
+        #     client_config['server_name'] + '-' + str(uuid.uuid4())[:8],
+        #     gen_server_cmd(NODE_PATH, id, client_config['obsido_port'], quorum_size=quorum_size),
+        #     './benchmark',
+        #     client_config['env']))
         
         db_to_remove.append(f".db-{id}")
     
