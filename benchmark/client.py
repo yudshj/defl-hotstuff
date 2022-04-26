@@ -6,11 +6,10 @@ import os
 import threading
 import time
 import uuid
-from typing import Optional
+from typing import Optional, Union
 
 from defl.aggregator import MultiKrumAggregator, FedAvgAggregator, KrumAggregator, AbstractAggregator
-from defl.committer import IpcCommitter
-from defl.committer.ipc_committer import ObsidoResponseQueue
+from defl.committer import LocalCommitter
 from defl.dataloader import Cifar10DataLoader, Sentiment140DataLoader, DataLoader
 from defl.trainer import Trainer
 from defl.types import ClientConfig
@@ -92,10 +91,10 @@ async def start(params: ClientConfig):
 
     # committer stuff
     client_name = str(uuid.uuid4())
-    fetch_queue = ObsidoResponseQueue()
     host, port = params['host'].split(':')
-    committer = IpcCommitter(client_name, host, int(port), params['obsido_port'], fetch_queue)
-    await committer.committer_bootstrap()
+    # committer: Committer = IpcCommitter(client_name, host, int(port), params['obsido_port'])
+    committer: LocalCommitter = LocalCommitter(client_name, './defl-local', params['quorum_size'])
+    # committer.committer_bootstrap()
 
     # defl stuff
     epoch_id = -1
@@ -122,8 +121,7 @@ async def start(params: ClientConfig):
     logging.info("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
     logging.info("[INIT LOOP]")
     logging.info("Current epoch id is %d.", epoch_id)
-    epoch_id = await client_routine(committer, epoch_id, fetch_queue, 0, gst_timeout, trainer, callbacks,
-                                    evaluate=False)
+    epoch_id = await client_routine(committer, epoch_id, 0, gst_timeout, trainer, callbacks, evaluate=False)
     model_save_path = "./models/{}/epoch_{:05d}.h5".format(client_name, epoch_id)
     save_freq = params['save_freq']
 
@@ -134,10 +132,10 @@ async def start(params: ClientConfig):
         logging.info("[LOOP %d]", i)
         logging.info("Current epoch id is %d. Waiting PASSIVE %.0f seconds...", epoch_id, fetch_timeout)
         try:
-            epoch_id = await asyncio.wait_for(client_routine(committer, epoch_id, fetch_queue, fetch_timeout, gst_timeout, trainer, callbacks, evaluate=True), timeout=gst_timeout * 2.5)
+            epoch_id = await asyncio.wait_for(client_routine(committer, epoch_id, fetch_timeout, gst_timeout, trainer, callbacks, evaluate=True), timeout=gst_timeout * 2.5)
         except asyncio.TimeoutError:
             logging.critical("TIMEOUT FOR CLIENT ROUTINE! POSSIBLY A DEADLOCK OCCURRED.")
-            await committer.clear_session()
+            committer.clear_session()
             continue
 
         if epoch_id % save_freq == 0:
@@ -145,19 +143,10 @@ async def start(params: ClientConfig):
             trainer.model.save(model_save_path)
             logging.info("Saved model to %s", model_save_path)
 
-
-async def active_fetch_after(sleep_time: float, committer):
-    await asyncio.sleep(sleep_time)
-    logging.info("PASSIVE received nothing. Fetching...")
-    await committer.fetch_w_last()
-
-
-async def client_routine(committer: IpcCommitter, epoch_id, fetch_queue: ObsidoResponseQueue, fetch_timeout, gst_timeout: float,
+async def client_routine(committer: LocalCommitter, epoch_id, fetch_timeout, gst_timeout: float,
                          trainer: Trainer, callbacks: List[tf.keras.callbacks.Callback], evaluate: bool = True):
-    active_fetch_task = asyncio.create_task(active_fetch_after(fetch_timeout, committer))
-    fetch_resp: WeightsResponse = await fetch_queue.drain()
-    active_fetch_task.cancel()
-
+    # fetch_resp: WeightsResponse = committer.fetch_w_last(fetch_timeout=fetch_timeout)
+    fetch_resp: WeightsResponse = committer.fetch_w_last(expected_last_epoch_id=epoch_id)
     logging.debug(
         f'Collected: {fetch_resp.request_uuid} with epoch_id={fetch_resp.r_last_epoch_id} and size of {fetch_resp.ByteSize()} bytes')
 
@@ -198,7 +187,7 @@ async def client_routine(committer: IpcCommitter, epoch_id, fetch_queue: ObsidoR
 
     # send weights
     logging.info("Updating weights...")
-    upd_weight_resp = await committer.update_weights(next_epoch_id, cur_weights)
+    upd_weight_resp = committer.update_weights(next_epoch_id, cur_weights)
     if upd_weight_resp is None:
         logging.critical("[ERROR] Updating weights failed!")
         return epoch_id
@@ -212,7 +201,7 @@ async def client_routine(committer: IpcCommitter, epoch_id, fetch_queue: ObsidoR
 
     # vote for new epoch
     logging.info("Voting new epoch %d...", next_epoch_id)
-    new_epoch_resp = await committer.new_epoch_vote(next_epoch_id)
+    new_epoch_resp = committer.new_epoch_vote(next_epoch_id)
     if new_epoch_resp is None:
         logging.critical("[ERROR] Voting new epoch failed!")
         return epoch_id

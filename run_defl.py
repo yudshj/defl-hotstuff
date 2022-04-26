@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import shutil
 
 PYTHON_PATH = shutil.which('python3')
@@ -14,6 +15,7 @@ import uuid
 from logging import info, warning
 from time import sleep
 from typing import List
+import sqlite3
 
 from benchmark.defl.types import ClientConfig
 
@@ -106,6 +108,9 @@ if __name__ == '__main__':
         if data_config['y_val']:
             data_config['y_val'] = os.path.abspath(data_config['y_val'])
 
+        if 'base_dir' not in cur_client_config:
+            cur_client_config['base_dir'] = os.path.abspath('./benchmark/defl-local')
+
         if 'task' not in cur_client_config:
             cur_client_config['task'] = conf['task']
 
@@ -132,6 +137,9 @@ if __name__ == '__main__':
         if 'gst' not in cur_client_config:
             cur_client_config['gst'] = 25_000
 
+        if 'quorum_size' not in cur_client_config:
+            cur_client_config['quorum_size'] = quorum_size
+
     info("Compiling protobuf code...")
     p = subprocess.run(
         ['protoc', '-I=proto/src/', '--python_out=benchmark/proto/', '--mypy_out=benchmark/proto/', 'defl.proto'],
@@ -139,6 +147,17 @@ if __name__ == '__main__':
         check=True
     )
     info("Compiled protobuf code")
+
+    info("Creating tables...")
+    sqlite_path = Path('./benchmark/defl-local/blockchain.db')
+    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+    if sqlite_path.exists():
+        sqlite_path.unlink()
+    with sqlite3.connect(str(sqlite_path)) as conn:
+        sqlcmd = open('./benchmark/defl-local/create_tables.sql', 'r').read()
+        conn.execute(sqlcmd)
+        conn.commit()
+    info("Created tables")
 
     info("Cleaning up old databases...")
     subprocess.run(['fd', '-HI', '^.db-[0-9]+$', 'benchmark', '-x', 'rm', '-rf', '{}'], capture_output=False,

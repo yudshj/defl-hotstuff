@@ -8,13 +8,30 @@ from defl.committer.utils import LengthDelimitedCodec
 from proto.defl_pb2 import ClientRequest, Response, RegisterInfo, WeightsResponse, ObsidoRequest
 
 
+class ObsidoResponseQueue(asyncio.Queue):
+    def __init__(self):
+        super().__init__()
+
+    async def drain(self) -> WeightsResponse:
+        fetch_resp: WeightsResponse = await self.get()
+        logging.debug(f"response_uuid={fetch_resp.response_uuid} epoch_id={fetch_resp.r_last_epoch_id}")
+        while True:
+            try:
+                pending_fetch_resp = self.get_nowait()
+                logging.debug(f"response_uuid={pending_fetch_resp.response_uuid} epoch_id={fetch_resp.r_last_epoch_id}")
+                if fetch_resp.r_last_epoch_id < pending_fetch_resp.r_last_epoch_id:
+                    fetch_resp = pending_fetch_resp
+            except asyncio.QueueEmpty:
+                break
+        return fetch_resp
+
+
 class IpcCommitter:
     def __init__(self,
                  client_name: str,
                  server_host: str,
                  consensus_port: int,
                  obsido_port: int,
-                 fetch_queue: Queue,
                  listen_backlog=5):
         self.client_name = client_name
         self.server_host = server_host
@@ -30,7 +47,7 @@ class IpcCommitter:
         self.obsido_tx: StreamWriter
         self.obsido_rx: StreamReader
         self.codec = LengthDelimitedCodec(8)
-        self.fetch_queue = fetch_queue
+        self.fetch_queue = ObsidoResponseQueue()
 
         # async sync stuff
         self.__response_map: Dict[str, Queue] = {}
@@ -144,7 +161,7 @@ class IpcCommitter:
         asyncio.create_task(self.passive_server.serve_forever())
         return await self.client_register()
 
-    async def fetch_w_last(self):
+    async def _fetch_a_w_last(self):
         client_request = ObsidoRequest(
             method=ObsidoRequest.Method.FETCH_W_LAST,
             request_uuid=str(uuid.uuid4()),
@@ -159,6 +176,18 @@ class IpcCommitter:
             self.obsido_tx.close()
             await self.obsido_tx.wait_closed()
             self.obsido_rx, self.obsido_tx = await asyncio.open_connection(self.server_host, self.obsido_port)
+
+    async def active_fetch_after(self, sleep_time: float):
+        await asyncio.sleep(sleep_time)
+        logging.info("PASSIVE received nothing. Fetching...")
+        await self._fetch_a_w_last()
+
+    async def fetch_w_last(self, fetch_timeout) -> WeightsResponse:
+        active_fetch_task = asyncio.create_task(self.active_fetch_after(fetch_timeout))
+        fetch_resp: WeightsResponse = await self.fetch_queue.drain()
+        active_fetch_task.cancel()
+
+        return fetch_resp
 
     async def update_weights(self, target_epoch_id: int, weights_b: bytes) -> Optional[Response]:
         client_request = ClientRequest(
@@ -213,21 +242,3 @@ class IpcCommitter:
                     del self.__response_map[client_request.request_uuid]
             logging.debug("released `self.__response_map_lock`")
             return None
-
-
-class ObsidoResponseQueue(asyncio.Queue):
-    def __init__(self):
-        super().__init__()
-
-    async def drain(self) -> WeightsResponse:
-        fetch_resp: WeightsResponse = await self.get()
-        logging.debug(f"response_uuid={fetch_resp.response_uuid} epoch_id={fetch_resp.r_last_epoch_id}")
-        while True:
-            try:
-                pending_fetch_resp = self.get_nowait()
-                logging.debug(f"response_uuid={pending_fetch_resp.response_uuid} epoch_id={fetch_resp.r_last_epoch_id}")
-                if fetch_resp.r_last_epoch_id < pending_fetch_resp.r_last_epoch_id:
-                    fetch_resp = pending_fetch_resp
-            except asyncio.QueueEmpty:
-                break
-        return fetch_resp

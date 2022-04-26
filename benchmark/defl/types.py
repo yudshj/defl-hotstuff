@@ -36,4 +36,6 @@ ClientConfig = TypedDict('ClientConfig', {
     'multikrum_factor': int,
     'gaussian_attack_factor': Optional[float],
     'signflip_attack_factor': Optional[float],
+
+    'quorum_size': int,
 })
