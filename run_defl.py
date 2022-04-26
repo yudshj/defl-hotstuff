@@ -154,8 +154,11 @@ if __name__ == '__main__':
     if sqlite_path.exists():
         sqlite_path.unlink()
     with sqlite3.connect(str(sqlite_path)) as conn:
-        sqlcmd = open('./benchmark/defl-local/create_tables.sql', 'r').read()
-        conn.execute(sqlcmd)
+        sqlcmds = open('./benchmark/defl-local/create_tables.sql', 'r').read().split(';')
+        for sqlcmd in sqlcmds:
+            if sqlcmd.strip() == '':
+                continue
+            conn.execute(sqlcmd)
         conn.commit()
     info("Created tables")
 
