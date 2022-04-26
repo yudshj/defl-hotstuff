@@ -88,3 +88,7 @@ class Trainer:
 
     def evaluate(self) -> List:
         return self.model.evaluate(self.test_data, verbose=1)
+
+    def get_metrics_names(self) -> List[str]:
+        return self.model.metrics_names
+        
