@@ -91,7 +91,7 @@ async def start(params: ClientConfig):
 
     # committer stuff
     client_name = str(uuid.uuid4())
-    host, port = params['host'].split(':')
+    # host, port = params['host'].split(':')
     # committer: Committer = IpcCommitter(client_name, host, int(port), params['obsido_port'])
     committer: LocalCommitter = LocalCommitter(client_name, './defl-local', params['quorum_size'])
     # committer.committer_bootstrap()

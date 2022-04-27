@@ -47,6 +47,6 @@ class DataLoader(ABC):
                   do_label_flip: bool,
                   shuffle_train: bool,
                   repeat_train: bool,
-                  train_augmentation: bool,
+                  train_augmentation: bool = True,
                   ) -> Tuple[Dataset, Dataset]:
         pass

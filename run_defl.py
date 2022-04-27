@@ -1,23 +1,22 @@
+import argparse
+import json
+import logging
 import os
-from pathlib import Path
 import shutil
+import sqlite3
+import subprocess
+import uuid
+from logging import info, warning
+from pathlib import Path
+from time import sleep
+from typing import List
+
+from benchmark.defl.types import ClientConfig
 
 PYTHON_PATH = shutil.which('python3')
 assert PYTHON_PATH
 PYTHON_PATH = os.path.abspath(PYTHON_PATH)
 NODE_PATH = os.path.abspath('./benchmark/node')
-
-import argparse
-import json
-import logging
-import subprocess
-import uuid
-from logging import info, warning
-from time import sleep
-from typing import List
-import sqlite3
-
-from benchmark.defl.types import ClientConfig
 
 
 def gen_client_cmd(python_path: str, client_name: str, client_config_path: str):
@@ -47,9 +46,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--sleep_sec', type=int, default=-1)
     parser.add_argument('--config', type=str, default="defl_config.json")
+    parser.add_argument('--use_hotstuff', type=bool, default=False)
     args = parser.parse_args()
 
     conf = json.load(open(args.config, 'r'))
+    USE_HOTSTUFF = args.use_hotstuff
     committee_base_port = conf["committee_base_port"]
     obsido_base_port = conf["obsido_base_port"]
     client_config_list: List[ClientConfig] = conf["client_config"]
@@ -62,31 +63,35 @@ if __name__ == '__main__':
 
     num_nodes = len(client_config_list)
 
-    info("Compiling rust node...")
-    subprocess.run(['cargo', 'build', '--release', '-j8'], capture_output=False, check=True)
-    info("Compiled rust node")
+    if USE_HOTSTUFF:
+        info("Using hotstuff")
+        info("Compiling rust node...")
+        subprocess.run(['cargo', 'build', '--release', '-j8'], capture_output=False, check=True)
+        info("Compiled rust node")
 
-    if os.path.exists('benchmark/node'):
-        info("Found node binary in benchmark/node")
-    else:
-        info("Creating softlink to node binary...")
+        if os.path.exists('benchmark/node'):
+            info("Found node binary in benchmark/node")
+        else:
+            info("Creating softlink to node binary...")
+            p = subprocess.run(
+                ['ln', '-s', '../target/release/node', 'benchmark/node'],
+                check=True
+            )
+            info("Created softlink to node binary")
+
+        info("Generating configs for server nodes...")
         p = subprocess.run(
-            ['ln', '-s', '../target/release/node', 'benchmark/node'],
+            [PYTHON_PATH, "gen_config.py", "--nodes", str(num_nodes), "--base_port", str(committee_base_port),
+            "--node_params_json_path", node_params_json_path],
+            capture_output=True,
+            cwd='./benchmark',
             check=True
         )
-        info("Created softlink to node binary")
+        info("Generated configs for server nodes")
 
-    info("Generating configs for server nodes...")
-    p = subprocess.run(
-        [PYTHON_PATH, "gen_config.py", "--nodes", str(num_nodes), "--base_port", str(committee_base_port),
-         "--node_params_json_path", node_params_json_path],
-        capture_output=True,
-        cwd='./benchmark',
-        check=True
-    )
-    info("Generated configs for server nodes")
-
-    committee_front = json.loads(p.stdout)
+        committee_front = json.loads(p.stdout)
+    else:
+        info("Using LOCAL")
 
     for id, cur_client_config in enumerate(client_config_list):
         assert ('attack' in cur_client_config)
@@ -118,15 +123,16 @@ if __name__ == '__main__':
             cur_client_config['client_name'] = "client-" + str(id)
         # cur_client_config['client_name'] += '-' + str(uuid.uuid4())[:8]
 
-        if 'server_name' not in cur_client_config:
-            cur_client_config['server_name'] = "node-" + str(id)
-        # cur_client_config['server_name'] += '-' + str(uuid.uuid4())[:8]
+        if USE_HOTSTUFF:
+            if 'server_name' not in cur_client_config:
+                cur_client_config['server_name'] = "node-" + str(id)
+            # cur_client_config['server_name'] += '-' + str(uuid.uuid4())[:8]
 
-        if 'obsido_port' not in cur_client_config:
-            cur_client_config['obsido_port'] = obsido_base_port + id
+            if 'obsido_port' not in cur_client_config:
+                cur_client_config['obsido_port'] = obsido_base_port + id
 
-        if 'host' not in cur_client_config:
-            cur_client_config['host'] = committee_front[id]
+            if 'host' not in cur_client_config:
+                cur_client_config['host'] = committee_front[id]
 
         if 'init_model_path' not in cur_client_config:
             cur_client_config['init_model_path'] = init_model_path
@@ -154,7 +160,7 @@ if __name__ == '__main__':
     if sqlite_path.exists():
         sqlite_path.unlink()
     with sqlite3.connect(str(sqlite_path)) as conn:
-        sqlcmds = open('./benchmark/defl-local/create_tables.sql', 'r').read().split(';')
+        sqlcmds = open('./benchmark/create_tables.sql', 'r').read().split(';')
         for sqlcmd in sqlcmds:
             if sqlcmd.strip() == '':
                 continue
@@ -186,12 +192,12 @@ if __name__ == '__main__':
             './benchmark',
             client_config['env']))
 
-        # LOCAL Running
-        # server_sessions.append((
-        #     client_config['server_name'] + '-' + str(uuid.uuid4())[:8],
-        #     gen_server_cmd(NODE_PATH, id, client_config['obsido_port'], quorum_size=quorum_size),
-        #     './benchmark',
-        #     client_config['env']))
+        if USE_HOTSTUFF:
+            server_sessions.append((
+                client_config['server_name'] + '-' + str(uuid.uuid4())[:8],
+                gen_server_cmd(NODE_PATH, id, client_config['obsido_port'], quorum_size=quorum_size),
+                './benchmark',
+                client_config['env']))
         
         db_to_remove.append(f".db-{id}")
     
