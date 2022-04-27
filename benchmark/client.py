@@ -133,13 +133,13 @@ async def start(params: ClientConfig):
         logging.info("Current epoch id is %d. Waiting PASSIVE %.0f seconds...", epoch_id, fetch_timeout)
         if gst_timeout > 0:
             try:
-                epoch_id = await asyncio.wait_for(client_routine(committer, epoch_id, fetch_timeout, gst_timeout, trainer, callbacks, evaluate=True), timeout=gst_timeout * 2.5)
+                epoch_id = await asyncio.wait_for(client_routine(committer, epoch_id, fetch_timeout, gst_timeout, trainer, callbacks, evaluate=(params['attack'] == 'none')), timeout=gst_timeout * 2.5)
             except asyncio.TimeoutError:
                 logging.critical("TIMEOUT FOR CLIENT ROUTINE! POSSIBLY A DEADLOCK OCCURRED.")
                 committer.clear_session()
                 continue
         else:
-            epoch_id = await client_routine(committer, epoch_id, fetch_timeout, gst_timeout, trainer, callbacks, evaluate=True)
+            epoch_id = await client_routine(committer, epoch_id, fetch_timeout, gst_timeout, trainer, callbacks, evaluate=(params['attack'] == 'none'))
 
         if epoch_id % save_freq == 0:
             model_save_path = "./models/{}/epoch_{:05d}.h5".format(client_name, epoch_id)
