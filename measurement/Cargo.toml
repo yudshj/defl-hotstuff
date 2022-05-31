@@ -1,0 +1,10 @@
+[package]
+name = "measurement"
+version = "0.1.0"
+authors = ["maghsk2017@gmail.com"]
+edition = "2021"
+publish = false
+
+[dependencies]
+rocksdb = "0.15.0"
+clap = { version = "3.1.18", features = ["derive"] }
