@@ -7,19 +7,19 @@ class LengthDelimitedCodec:
     def __init__(self, length_field_length: int):
         self.length_field_length = length_field_length
 
-    def length_delimited_send(self, sock: socket, data: bytes):
-        length = len(data)
-        sock.send(length.to_bytes(self.length_field_length, byteorder='big', signed=False) + data)
+    # def length_delimited_send(self, sock: socket, data: bytes):
+    #     length = len(data)
+    #     sock.send(length.to_bytes(self.length_field_length, byteorder='big', signed=False) + data)
 
-    def length_delimited_recv(self, sock: socket) -> bytes:
-        length = sock.recv(self.length_field_length)
-        length = int.from_bytes(length, byteorder='big', signed=False)
-        payload = sock.recv(length)
-        return payload
+    # def length_delimited_recv(self, sock: socket) -> bytes:
+    #     length_bytes = sock.recv(self.length_field_length)
+    #     length = int.from_bytes(length_bytes, byteorder='big', signed=False)
+    #     payload = sock.recv(length)
+    #     return payload
 
     async def async_length_delimited_recv(self, reader: StreamReader):
-        length = await reader.readexactly(self.length_field_length)
-        length = int.from_bytes(length, byteorder='big', signed=False)
+        length_bytes = await reader.readexactly(self.length_field_length)
+        length = int.from_bytes(length_bytes, byteorder='big', signed=False)
         logging.debug(f'Ought to receive {length} bytes')
         payload = await reader.readexactly(length)
         return payload

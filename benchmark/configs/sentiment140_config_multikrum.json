@@ -1,0 +1,61 @@
+{
+    "init_model_path": "./benchmark/defl/data/sentiment140_init_model.h5",
+    "committee_base_port": 9000,
+    "obsido_base_port": 19000,
+    "task": "sentiment140",
+    "client_config": [
+        {
+            "attack": "none",
+            "batch_size": 1024,
+            "local_train_steps": 500,
+            "data_config": {
+                "x_train": "./benchmark/defl/data/sentiment140_x_train.csr.npz",
+                "y_train": "./benchmark/defl/data/sentiment140_y_train.npy",
+                "x_test": "./benchmark/defl/data/sentiment140_x_test.csr.npz",
+                "y_test": "./benchmark/defl/data/sentiment140_y_test.npy",
+                "x_val": null,
+                "y_val": null
+            }
+        },
+        {
+            "attack": "none",
+            "batch_size": 1024,
+            "local_train_steps": 500,
+            "data_config": {
+                "x_train": "./benchmark/defl/data/sentiment140_x_train.csr.npz",
+                "y_train": "./benchmark/defl/data/sentiment140_y_train.npy",
+                "x_test": "./benchmark/defl/data/sentiment140_x_test.csr.npz",
+                "y_test": "./benchmark/defl/data/sentiment140_y_test.npy",
+                "x_val": null,
+                "y_val": null
+            }
+        },
+        {
+            "attack": "none",
+            "batch_size": 1024,
+            "local_train_steps": 500,
+            "data_config": {
+                "x_train": "./benchmark/defl/data/sentiment140_x_train.csr.npz",
+                "y_train": "./benchmark/defl/data/sentiment140_y_train.npy",
+                "x_test": "./benchmark/defl/data/sentiment140_x_test.csr.npz",
+                "y_test": "./benchmark/defl/data/sentiment140_y_test.npy",
+                "x_val": null,
+                "y_val": null
+            }
+        },
+        {
+            "attack": "gaussian",
+            "batch_size": 1024,
+            "local_train_steps": 500,
+            "data_config": {
+                "x_train": "./benchmark/defl/data/sentiment140_x_train.csr.npz",
+                "y_train": "./benchmark/defl/data/sentiment140_y_train.npy",
+                "x_test": "./benchmark/defl/data/sentiment140_x_test.csr.npz",
+                "y_test": "./benchmark/defl/data/sentiment140_y_test.npy",
+                "x_val": null,
+                "y_val": null
+            }
+        }
+    ],
+    "node_params_path": "./node_params.json"
+}

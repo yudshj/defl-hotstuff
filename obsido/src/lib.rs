@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use bytes::Bytes;
 use futures::sink::SinkExt as _;
-use log::{debug, info, warn};
+use log::{info, warn};
 use prost::Message;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
@@ -27,15 +27,23 @@ struct TxReceiverHandler {
 #[async_trait]
 impl MessageHandler for TxReceiverHandler {
     async fn dispatch(&self, writer: &mut Writer, message: Bytes) -> Result<(), Box<dyn Error>> {
-        debug!("Sending Ack to client");
-        // Immediate response to the client.
-        let _ = writer.send(Bytes::from("Ack")).await;
 
-        // Send the transaction to the batch maker.
-        self.tx_filter
-            .send(message.to_vec())
-            .await
-            .expect("Failed to send transaction");
+        let imm_resp = match ObsidoRequest::decode(message.clone()) {
+            Ok(_) => {
+                // Send the transaction to the batch maker.
+                self.tx_filter
+                    .send(message.to_vec())
+                    .await
+                    .expect("Failed to send transaction");
+
+                "Ack"
+            },
+            Err(_) => "Invalid OBSIDO Transaction"
+        };
+
+        info!("OBSIDO HANDLER: Sending {} to client", &imm_resp);
+        // Immediate response to the client.
+        let _ = writer.send(Bytes::from(imm_resp)).await;
 
         // Give the change to schedule other tasks.
         tokio::task::yield_now().await;
@@ -80,7 +88,7 @@ impl ObsidoHandler {
                     register_info,
                 } = client_request;
                 info!("filtering transactions {}", &request_uuid);
-                Method::FetchWLast as i32;
+                // Method::FetchWLast as i32;
                 match Method::from_i32(method) {
                     Some(Method::FetchWLast) => {
                         let defl_databank = self.defl_databank.lock().unwrap().clone();

@@ -16,9 +16,8 @@ _DATA_AUGMENTER = tf.keras.Sequential([
 
 
 class Cifar10DataLoader(DataLoader):
-    def __init__(self):
-        self.train_steps_per_epoch: int = -1
-        self.test_steps_per_epoch: int = -1
+    def __init__(self) -> None:
+        super().__init__()
 
     @staticmethod
     def gen_init_model() -> tf.keras.Model:
@@ -93,10 +92,7 @@ class Cifar10DataLoader(DataLoader):
                         kernel_initializer='he_normal',
                         activation='softmax')(y)
 
-        # instantiate and compile model
-        # orig paper uses SGD but RMSprop works better for DenseNet
         model = Model(inputs=inputs, outputs=outputs)
-        Cifar10DataLoader.compile(model)
         return model
 
     @staticmethod

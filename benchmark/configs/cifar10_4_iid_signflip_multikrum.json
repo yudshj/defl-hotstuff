@@ -1,0 +1,105 @@
+{
+    "client_config": [
+        {
+            "attack": "none",
+            "aggregator": "multikrum",
+            "num_byzantine": 1,
+            "save_freq": 5,
+            "multikrum_factor": 2,
+            "gaussian_attack_factor": null,
+            "signflip_attack_factor": null,
+            "gst": 500000,
+            "batch_size": 32,
+            "data_config": {
+                "x_test": "./benchmark/defl/data/splits/cifar10/iid_4/node-0_x_test.npz",
+                "x_train": "./benchmark/defl/data/splits/cifar10/iid_4/node-0_x_train.npz",
+                "x_val": null,
+                "y_test": "./benchmark/defl/data/splits/cifar10/iid_4/node-0_y_test.npz",
+                "y_train": "./benchmark/defl/data/splits/cifar10/iid_4/node-0_y_train.npz",
+                "y_val": null
+            },
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0",
+                "TF_FORCE_GPU_ALLOW_GROWTH": "true"
+            },
+            "local_train_steps": 1000
+        },
+        {
+            "attack": "none",
+            "aggregator": "multikrum",
+            "num_byzantine": 1,
+            "save_freq": 5,
+            "multikrum_factor": 2,
+            "gaussian_attack_factor": null,
+            "signflip_attack_factor": null,
+            "gst": 500000,
+            "batch_size": 32,
+            "data_config": {
+                "x_test": "./benchmark/defl/data/splits/cifar10/iid_4/node-1_x_test.npz",
+                "x_train": "./benchmark/defl/data/splits/cifar10/iid_4/node-1_x_train.npz",
+                "x_val": null,
+                "y_test": "./benchmark/defl/data/splits/cifar10/iid_4/node-1_y_test.npz",
+                "y_train": "./benchmark/defl/data/splits/cifar10/iid_4/node-1_y_train.npz",
+                "y_val": null
+            },
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "1",
+                "TF_FORCE_GPU_ALLOW_GROWTH": "true"
+            },
+            "local_train_steps": 1000
+        },
+        {
+            "attack": "none",
+            "aggregator": "multikrum",
+            "num_byzantine": 1,
+            "save_freq": 5,
+            "multikrum_factor": 2,
+            "gaussian_attack_factor": null,
+            "signflip_attack_factor": null,
+            "gst": 500000,
+            "batch_size": 32,
+            "data_config": {
+                "x_test": "./benchmark/defl/data/splits/cifar10/iid_4/node-2_x_test.npz",
+                "x_train": "./benchmark/defl/data/splits/cifar10/iid_4/node-2_x_train.npz",
+                "x_val": null,
+                "y_test": "./benchmark/defl/data/splits/cifar10/iid_4/node-2_y_test.npz",
+                "y_train": "./benchmark/defl/data/splits/cifar10/iid_4/node-2_y_train.npz",
+                "y_val": null
+            },
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "2",
+                "TF_FORCE_GPU_ALLOW_GROWTH": "true"
+            },
+            "local_train_steps": 1000
+        },
+        {
+            "attack": "sign",
+            "aggregator": "multikrum",
+            "num_byzantine": 1,
+            "save_freq": 5,
+            "multikrum_factor": 2,
+            "gaussian_attack_factor": null,
+            "signflip_attack_factor": -4.0,
+            "gst": 500000,
+            "batch_size": 32,
+            "data_config": {
+                "x_test": "./benchmark/defl/data/splits/cifar10/iid_4/node-3_x_test.npz",
+                "x_train": "./benchmark/defl/data/splits/cifar10/iid_4/node-3_x_train.npz",
+                "x_val": null,
+                "y_test": "./benchmark/defl/data/splits/cifar10/iid_4/node-3_y_test.npz",
+                "y_train": "./benchmark/defl/data/splits/cifar10/iid_4/node-3_y_train.npz",
+                "y_val": null
+            },
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "3",
+                "TF_FORCE_GPU_ALLOW_GROWTH": "true"
+            },
+            "local_train_steps": 1000
+        }
+    ],
+    "committee_base_port": 9000,
+    "init_model_path": "./benchmark/defl/data/cifar10_init_model.h5",
+    "node_params_path": "./node_params.json",
+    "obsido_base_port": 19000,
+    "task": "cifar10"
+}

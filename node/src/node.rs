@@ -32,7 +32,7 @@ pub struct Node {
     cur_defl_databank: DeflDatabank,
     voted_clients: HashSet<String>,
     defl_sender: DeflSender,
-    quorum: usize,
+    quorum_size: usize,
 }
 
 impl Node {
@@ -99,7 +99,7 @@ impl Node {
             tx_commit,
         );
 
-        info!("Node {} successfully booted", name);
+        info!("Node {} successfully booted, QUORUM_SIZE={}", name, quorum);
         Ok(Self {
             commit: rx_commit,
             block_store: store,
@@ -107,7 +107,7 @@ impl Node {
             cur_defl_databank,
             voted_clients: HashSet::new(),
             defl_sender,
-            quorum,
+            quorum_size: quorum,
         })
     }
 
@@ -152,11 +152,11 @@ impl Node {
                         info!("Client [{}] voted.", client_name);
 
                         // check if meet quorum
-                        if self.voted_clients.len() < self.quorum {
+                        if self.voted_clients.len() < self.quorum_size {
                             info!(
                                 "Not enough clients voted ({} / {}).",
                                 self.voted_clients.len(),
-                                self.quorum
+                                self.quorum_size
                             );
                             Status::NotMeetQuorumWait
                         } else {

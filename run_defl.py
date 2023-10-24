@@ -1,32 +1,35 @@
-import argparse
-import copy
-import json
-import logging
 import os
 import shutil
+
+PYTHON_PATH = shutil.which('python3')
+assert PYTHON_PATH
+PYTHON_PATH = os.path.abspath(PYTHON_PATH)
+NODE_PATH = os.path.abspath('./benchmark/node')
+
+import argparse
+import json
+import logging
 import subprocess
-import typing
 import uuid
 from logging import info, warning
 from time import sleep
+from typing import List
 
-from benchmark.defl.types import *
-
-PYTHON_PATH = os.path.abspath(shutil.which('python3'))
-NODE_PATH = os.path.abspath('./benchmark/node')
+from benchmark.defl.types import ClientConfig
 
 
 def gen_client_cmd(python_path: str, client_name: str, client_config_path: str):
-    return '{} client.py {} 2> logs/{}.log'.format(
+    return '{} client.py {} 2> logs/{}.log ; bash'.format(
         python_path,
         client_config_path,
         client_name
     )
 
 
-def gen_server_cmd(rust_node_path: str, id: int, obsido_port: int):
+def gen_server_cmd(rust_node_path: str, id: int, obsido_port: int, quorum_size: int):
     return (
         f"{rust_node_path} -vv run "
+        f"--quorum {quorum_size} "
         f"--obsido {obsido_port} "
         f"--keys .node-{id}.json "
         f"--committee .committee.json "
@@ -40,19 +43,26 @@ if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--sleep_sec', type=int, default=150)
+    parser.add_argument('--sleep_sec', type=int, default=-1)
     parser.add_argument('--config', type=str, default="defl_config.json")
     args = parser.parse_args()
 
     conf = json.load(open(args.config, 'r'))
     committee_base_port = conf["committee_base_port"]
     obsido_base_port = conf["obsido_base_port"]
-    client_config_list: typing.List[ClientConfig] = conf["client_config"]
+    client_config_list: List[ClientConfig] = conf["client_config"]
 
     node_params_json_path = os.path.abspath(conf["node_params_path"])
     init_model_path = os.path.abspath(conf["init_model_path"])
+    
+    quorum_size = conf["quorum_size"]
+    assert type(quorum_size) == int
 
     num_nodes = len(client_config_list)
+
+    info("Compiling rust node...")
+    subprocess.run(['cargo', 'build', '--release', '-j8'], capture_output=False, check=True)
+    info("Compiled rust node")
 
     if os.path.exists('benchmark/node'):
         info("Found node binary in benchmark/node")
@@ -130,10 +140,6 @@ if __name__ == '__main__':
     )
     info("Compiled protobuf code")
 
-    info("Compiling rust node...")
-    subprocess.run(['cargo', 'build', '--release', '-j8'], capture_output=False, check=True)
-    info("Compiled rust node")
-
     info("Cleaning up old databases...")
     subprocess.run(['fd', '-HI', '^.db-[0-9]+$', 'benchmark', '-x', 'rm', '-rf', '{}'], capture_output=False,
                        check=True)
@@ -153,14 +159,14 @@ if __name__ == '__main__':
             json.dump(client_config, f, indent=4, sort_keys=True)
 
         client_sessions.append((
-            client_config['client_name'],
+            client_config['client_name'] + '-' + str(uuid.uuid4())[:8],
             gen_client_cmd(PYTHON_PATH, client_config['client_name'], path),
             './benchmark',
             client_config['env']))
 
         server_sessions.append((
-            client_config['server_name'],
-            gen_server_cmd(NODE_PATH, id, client_config['obsido_port']),
+            client_config['server_name'] + '-' + str(uuid.uuid4())[:8],
+            gen_server_cmd(NODE_PATH, id, client_config['obsido_port'], quorum_size=quorum_size),
             './benchmark',
             client_config['env']))
         
@@ -198,9 +204,11 @@ if __name__ == '__main__':
                 info(f'Remaining {i} seconds...')
                 sleep(10)
         else:
+            total_sec = 0
             while True:
-                info('Sleeping for 10 seconds...')
-                sleep(10)
+                info(f'Slept for {total_sec} seconds...')
+                sleep(50)
+                total_sec += 50
     except KeyboardInterrupt:
         print()
         warning("Keyboard interrupt detected, killing sessions...")

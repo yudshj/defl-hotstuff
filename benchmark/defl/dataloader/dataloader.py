@@ -26,6 +26,11 @@ def load_array(path: str):
 
 class DataLoader(ABC):
 
+    def __init__(self) -> None:
+        super().__init__()
+        self.train_steps_per_epoch: int = -1
+        self.test_steps_per_epoch:int = -1
+
     @staticmethod
     def compile(model: Model):
         pass
@@ -40,7 +45,8 @@ class DataLoader(ABC):
                   dataset_config: DataConfig,
                   batch_size: int,
                   do_label_flip: bool,
-                  shuffle_train: bool = True,
-                  train_augmentation: bool = True,
+                  shuffle_train: bool,
+                  repeat_train: bool,
+                  train_augmentation: bool,
                   ) -> Tuple[Dataset, Dataset]:
         pass

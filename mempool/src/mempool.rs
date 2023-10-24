@@ -3,13 +3,15 @@ use std::error::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
 use futures::sink::SinkExt as _;
-use log::{debug, info, warn};
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 use crypto::{Digest, PublicKey};
 use network::{MessageHandler, Receiver as NetworkReceiver, Writer};
 use store::Store;
+use proto::defl::ClientRequest;
+use prost::Message;
 
 use crate::batch_maker::{Batch, BatchMaker, Transaction};
 use crate::config::{Committee, Parameters};
@@ -206,15 +208,23 @@ struct TxReceiverHandler {
 #[async_trait]
 impl MessageHandler for TxReceiverHandler {
     async fn dispatch(&self, writer: &mut Writer, message: Bytes) -> Result<(), Box<dyn Error>> {
-        debug!("Sending Ack to client");
-        // Immediate response to the client.
-        let _ = writer.send(Bytes::from("Ack")).await;
 
-        // Send the transaction to the batch maker.
-        self.tx_batch_maker
-            .send(message.to_vec())
-            .await
-            .expect("Failed to send transaction");
+        let imm_resp = match ClientRequest::decode(message.clone()) {
+            Ok(_) => {
+                // Send the transaction to the batch maker.
+                self.tx_batch_maker
+                    .send(message.to_vec())
+                    .await
+                    .expect("Failed to send transaction");
+
+                "Ack"
+            },
+            Err(_) => "Invalid CLIENT Transaction"
+        };
+
+        info!("CLIENT HANDLER: Sending {} to client", &imm_resp);
+        // Immediate response to the client.
+        let _ = writer.send(Bytes::from(imm_resp)).await;
 
         // Give the change to schedule other tasks.
         tokio::task::yield_now().await;
